@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { DEMO_MODE } from "@/lib/config";
+import { mockCourses } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,19 +36,26 @@ const CoursesPage = () => {
 
   const { data: courses = [], isLoading } = useQuery<Course[]>({
     queryKey: ["courses"],
-    queryFn: () => api.get("/courses").then((r) => r.data.data ?? r.data),
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockCourses);
+      return api.get("/courses").then((r) => r.data.data ?? r.data);
+    },
   });
 
   const saveMut = useMutation({
-    mutationFn: () => editing
-      ? api.put(`/courses/${editing.id}`, form)
-      : api.post("/courses", form),
+    mutationFn: () => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return editing ? api.put(`/courses/${editing.id}`, form).then(() => {}) : api.post("/courses", form).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["courses"] }); setModalOpen(false); setEditing(null); toast.success(editing ? "Curso atualizado" : "Curso criado"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => api.delete(`/courses/${id}`),
+    mutationFn: (id: string) => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return api.delete(`/courses/${id}`).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["courses"] }); setDeleteTarget(null); toast.success("Curso removido"); },
   });
 

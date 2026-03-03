@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { DEMO_MODE } from "@/lib/config";
+import { mockUsers } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Trash2, Users, Loader2 } from "lucide-react";
 
 interface User {
   id: string;
@@ -30,22 +32,34 @@ const UsersPage = () => {
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
-    queryFn: () => api.get("/admin/users").then((r) => r.data.data ?? r.data),
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockUsers);
+      return api.get("/admin/users").then((r) => r.data.data ?? r.data);
+    },
   });
 
   const createMut = useMutation({
-    mutationFn: () => api.post("/auth/register", form),
+    mutationFn: () => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return api.post("/auth/register", form).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); setModalOpen(false); toast.success("Usuário criado"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao criar usuário"),
   });
 
   const toggleMut = useMutation({
-    mutationFn: (id: string) => api.put(`/admin/users/${id}/toggle-active`),
+    mutationFn: (id: string) => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return api.put(`/admin/users/${id}/toggle-active`).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("Status alterado"); },
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => api.delete(`/admin/users/${id}`),
+    mutationFn: (id: string) => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return api.delete(`/admin/users/${id}`).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); setDeleteTarget(null); toast.success("Usuário removido"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao remover"),
   });
@@ -100,7 +114,6 @@ const UsersPage = () => {
         </div>
       )}
 
-      {/* Create Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo Usuário</DialogTitle></DialogHeader>
