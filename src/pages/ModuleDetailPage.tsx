@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { DEMO_MODE } from "@/lib/config";
+import { mockVideos, mockActivities, mockModules } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,11 +51,40 @@ const ModuleDetailPage = () => {
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
-  const { data: moduleData } = useQuery({ queryKey: ["module", moduleId], queryFn: () => api.get(base).then((r) => r.data.data ?? r.data) });
-  const { data: videos = [], isLoading: vLoading } = useQuery<VideoItem[]>({ queryKey: ["videos", moduleId], queryFn: () => api.get(`${base}/videos`).then((r) => r.data.data ?? r.data) });
-  const { data: activities = [], isLoading: aLoading } = useQuery<Activity[]>({ queryKey: ["activities", moduleId], queryFn: () => api.get(`${base}/activities`).then((r) => r.data.data ?? r.data).catch(() => []) });
+  // Find module name from mock data
+  const findModuleName = () => {
+    if (!DEMO_MODE) return null;
+    for (const modules of Object.values(mockModules)) {
+      const found = modules.find((m) => m.id === moduleId);
+      if (found) return found;
+    }
+    return null;
+  };
 
-  // Build sequence
+  const { data: moduleData } = useQuery({
+    queryKey: ["module", moduleId],
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(findModuleName() || { id: moduleId, title: "Módulo", description: "" });
+      return api.get(base).then((r) => r.data.data ?? r.data);
+    },
+  });
+
+  const { data: videos = [], isLoading: vLoading } = useQuery<VideoItem[]>({
+    queryKey: ["videos", moduleId],
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockVideos[moduleId!] || []);
+      return api.get(`${base}/videos`).then((r) => r.data.data ?? r.data);
+    },
+  });
+
+  const { data: activities = [], isLoading: aLoading } = useQuery<Activity[]>({
+    queryKey: ["activities", moduleId],
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockActivities[moduleId!] || []);
+      return api.get(`${base}/activities`).then((r) => r.data.data ?? r.data).catch(() => []);
+    },
+  });
+
   const sequence: SequenceItem[] = [
     ...videos.map((v) => ({ type: "video" as const, data: v })),
     ...activities.map((a) => ({ type: "activity" as const, data: a })),
@@ -64,24 +94,24 @@ const ModuleDetailPage = () => {
     return orderA - orderB;
   });
 
+  const demoAction = () => { toast.info("Modo demo — ação simulada"); return Promise.resolve(); };
+
   const saveVideoMut = useMutation({
-    mutationFn: () => editingVideo
-      ? api.put(`${base}/videos/${editingVideo.id}`, videoForm)
-      : api.post(`${base}/videos`, videoForm),
+    mutationFn: () => {
+      if (DEMO_MODE) return demoAction();
+      return editingVideo ? api.put(`${base}/videos/${editingVideo.id}`, videoForm).then(() => {}) : api.post(`${base}/videos`, videoForm).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["videos", moduleId] }); setVideoModalOpen(false); setEditingVideo(null); toast.success("Aula salva"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
   const saveActMut = useMutation({
-    mutationFn: () => editingActivity
-      ? api.put(`${base}/activities/${editingActivity.id}`, actForm)
-      : api.post(`${base}/activities`, actForm),
+    mutationFn: () => {
+      if (DEMO_MODE) return demoAction();
+      return editingActivity ? api.put(`${base}/activities/${editingActivity.id}`, actForm).then(() => {}) : api.post(`${base}/activities`, actForm).then(() => {});
+    },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
-      if (!editingActivity) {
-        const newAct = res.data.data ?? res.data;
-        setActiveActForQuestions(newAct);
-      }
       setActivityModalOpen(false);
       setEditingActivity(null);
       toast.success("Atividade salva");
@@ -90,10 +120,10 @@ const ModuleDetailPage = () => {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (t: { type: string; id: string }) =>
-      t.type === "video"
-        ? api.delete(`${base}/videos/${t.id}`)
-        : api.delete(`${base}/activities/${t.id}`),
+    mutationFn: (t: { type: string; id: string }) => {
+      if (DEMO_MODE) return demoAction();
+      return t.type === "video" ? api.delete(`${base}/videos/${t.id}`).then(() => {}) : api.delete(`${base}/activities/${t.id}`).then(() => {});
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos", moduleId] });
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
@@ -104,12 +134,8 @@ const ModuleDetailPage = () => {
 
   const saveQuestionMut = useMutation({
     mutationFn: () => {
-      const payload: any = {
-        questionText: qForm.questionText,
-        questionType: qForm.questionType,
-        orderIndex: qForm.orderIndex,
-        points: qForm.points,
-      };
+      if (DEMO_MODE) return demoAction();
+      const payload: any = { questionText: qForm.questionText, questionType: qForm.questionType, orderIndex: qForm.orderIndex, points: qForm.points };
       if (qForm.questionType === "MULTIPLE_CHOICE") payload.options = qForm.options;
       else if (qForm.questionType === "TRUE_FALSE") {
         payload.options = [
@@ -117,7 +143,7 @@ const ModuleDetailPage = () => {
           { optionText: "Falso", isCorrect: qForm.correctAnswer === "false", orderIndex: 1 },
         ];
       }
-      return api.post(`${base}/activities/${activeActForQuestions!.id}/questions`, payload);
+      return api.post(`${base}/activities/${activeActForQuestions!.id}/questions`, payload).then(() => {});
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["activities", moduleId] }); setQuestionModalOpen(false); toast.success("Questão adicionada"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
@@ -164,7 +190,7 @@ const ModuleDetailPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sequence.map((item, idx) => (
+              {sequence.map((item) => (
                 <TableRow key={`${item.type}-${item.data.id}`}>
                   <TableCell className="text-muted-foreground">{item.type === "video" ? item.data.orderIndex : (item.data as Activity).sequenceOrder}</TableCell>
                   <TableCell>

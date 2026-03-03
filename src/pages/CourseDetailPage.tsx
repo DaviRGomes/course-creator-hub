@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { DEMO_MODE } from "@/lib/config";
+import { mockCourses, mockModules } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,24 +36,34 @@ const CourseDetailPage = () => {
 
   const { data: course } = useQuery({
     queryKey: ["course", id],
-    queryFn: () => api.get(`/courses/${id}`).then((r) => r.data.data ?? r.data),
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockCourses.find((c) => c.id === id) || { id, title: "Curso", description: "" });
+      return api.get(`/courses/${id}`).then((r) => r.data.data ?? r.data);
+    },
   });
 
   const { data: modules = [], isLoading } = useQuery<Module[]>({
     queryKey: ["modules", id],
-    queryFn: () => api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data),
+    queryFn: () => {
+      if (DEMO_MODE) return Promise.resolve(mockModules[id!] || []);
+      return api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data);
+    },
   });
 
   const saveMut = useMutation({
-    mutationFn: () => editing
-      ? api.put(`/courses/${id}/modules/${editing.id}`, form)
-      : api.post(`/courses/${id}/modules`, form),
+    mutationFn: () => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return editing ? api.put(`/courses/${id}/modules/${editing.id}`, form).then(() => {}) : api.post(`/courses/${id}/modules`, form).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["modules", id] }); setModalOpen(false); setEditing(null); toast.success(editing ? "Módulo atualizado" : "Módulo criado"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
   const deleteMut = useMutation({
-    mutationFn: (moduleId: string) => api.delete(`/courses/${id}/modules/${moduleId}`),
+    mutationFn: (moduleId: string) => {
+      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
+      return api.delete(`/courses/${id}/modules/${moduleId}`).then(() => {});
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["modules", id] }); setDeleteTarget(null); toast.success("Módulo removido"); },
   });
 

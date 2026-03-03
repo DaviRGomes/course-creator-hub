@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, type ReactNode } from "react";
 import api from "@/lib/api";
-
-const DEMO_MODE = !import.meta.env.VITE_API_URL;
+import { DEMO_MODE } from "@/lib/config";
 
 interface AuthState {
   token: string | null;
@@ -24,10 +23,12 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<AuthState>({
-    token: DEMO_MODE ? "demo" : localStorage.getItem("admin_token"),
-    email: DEMO_MODE ? "admin@demo.com" : localStorage.getItem("admin_email"),
-    isAuthenticated: DEMO_MODE ? true : !!localStorage.getItem("admin_token"),
+  const [state, setState] = useState<AuthState>(() => {
+    if (DEMO_MODE) {
+      return { token: "demo", email: "admin@demo.com", isAuthenticated: true };
+    }
+    const token = localStorage.getItem("admin_token");
+    return { token, email: localStorage.getItem("admin_email"), isAuthenticated: !!token };
   });
 
   const login = async (email: string, password: string) => {
@@ -44,6 +45,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    if (DEMO_MODE) {
+      setState({ token: null, email: null, isAuthenticated: false });
+      return;
+    }
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_email");
     setState({ token: null, email: null, isAuthenticated: false });
