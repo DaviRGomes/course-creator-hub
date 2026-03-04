@@ -9,9 +9,9 @@ export const mockUsers = [
 ];
 
 export const mockCourses = [
-  { id: "1", title: "Siege Masterclass", description: "Aprenda todas as técnicas avançadas de jogo competitivo.", thumbnail: "", active: true, modulesCount: 3 },
-  { id: "2", title: "Fundamentos de Design", description: "Curso completo de design thinking e prototipagem.", thumbnail: "", active: true, modulesCount: 5 },
-  { id: "3", title: "Marketing Digital", description: "Estratégias de marketing para crescimento orgânico.", thumbnail: "", active: false, modulesCount: 2 },
+  { id: "1", title: "Siege Masterclass", description: "Aprenda todas as técnicas avançadas de jogo competitivo. Domine mapas, operadores e estratégias de equipe.", thumbnail: "", active: true, modulesCount: 3 },
+  { id: "2", title: "Fundamentos de Design", description: "Curso completo de design thinking e prototipagem. Do conceito ao produto final.", thumbnail: "", active: true, modulesCount: 5 },
+  { id: "3", title: "Marketing Digital", description: "Estratégias de marketing para crescimento orgânico e pago.", thumbnail: "", active: false, modulesCount: 2 },
 ];
 
 export const mockModules: Record<string, Array<{ id: string; title: string; description: string; orderIndex: number; videosCount: number; activitiesCount: number }>> = {
@@ -81,3 +81,29 @@ export const mockActivities: Record<string, Array<{
     },
   ],
 };
+
+// Student-specific mock data
+export interface Enrollment {
+  courseId: string;
+  enrolledAt: string;
+  progress: number; // 0-100
+  completedLessons: string[]; // video IDs
+  completedActivities: string[]; // activity IDs
+}
+
+export const mockEnrollments: Enrollment[] = [
+  {
+    courseId: "1",
+    enrolledAt: "2025-12-01",
+    progress: 45,
+    completedLessons: ["v1", "v2", "v3"],
+    completedActivities: ["a1"],
+  },
+  {
+    courseId: "2",
+    enrolledAt: "2026-01-15",
+    progress: 10,
+    completedLessons: [],
+    completedActivities: [],
+  },
+];
