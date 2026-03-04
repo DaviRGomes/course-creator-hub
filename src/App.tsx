@@ -6,11 +6,17 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AdminLayout from "@/components/AdminLayout";
+import StudentLayout from "@/components/StudentLayout";
 import Login from "@/pages/Login";
 import UsersPage from "@/pages/UsersPage";
 import CoursesPage from "@/pages/CoursesPage";
 import CourseDetailPage from "@/pages/CourseDetailPage";
 import ModuleDetailPage from "@/pages/ModuleDetailPage";
+import CatalogPage from "@/pages/student/CatalogPage";
+import StudentDashboard from "@/pages/student/StudentDashboard";
+import CourseOverviewPage from "@/pages/student/CourseOverviewPage";
+import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
+import QuizPage from "@/pages/student/QuizPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,13 +30,26 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/users" replace />} />
+
+            {/* Student routes */}
+            <Route path="/" element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="catalog" element={<CatalogPage />} />
+              <Route path="learn/:courseId" element={<CourseOverviewPage />} />
+              <Route path="learn/:courseId/modules/:moduleId/lesson/:lessonId" element={<LessonPlayerPage />} />
+              <Route path="learn/:courseId/modules/:moduleId/quiz/:quizId" element={<QuizPage />} />
+            </Route>
+
+            {/* Admin routes */}
+            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/admin/users" replace />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="courses" element={<CoursesPage />} />
               <Route path="courses/:id" element={<CourseDetailPage />} />
               <Route path="courses/:id/modules/:moduleId" element={<ModuleDetailPage />} />
             </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

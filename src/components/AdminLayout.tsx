@@ -5,8 +5,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/users", label: "Usuários", icon: Users },
-  { to: "/courses", label: "Cursos", icon: BookOpen },
+  { to: "/admin/users", label: "Usuários", icon: Users },
+  { to: "/admin/courses", label: "Cursos", icon: BookOpen },
 ];
 
 const AdminLayout = () => {
