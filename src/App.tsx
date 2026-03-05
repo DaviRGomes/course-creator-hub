@@ -12,11 +12,11 @@ import UsersPage from "@/pages/UsersPage";
 import CoursesPage from "@/pages/CoursesPage";
 import CourseDetailPage from "@/pages/CourseDetailPage";
 import ModuleDetailPage from "@/pages/ModuleDetailPage";
-import CatalogPage from "@/pages/student/CatalogPage";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import CourseOverviewPage from "@/pages/student/CourseOverviewPage";
 import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
+import CertificatePage from "@/pages/student/CertificatePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +35,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<StudentDashboard />} />
-              <Route path="catalog" element={<CatalogPage />} />
+              <Route path="certificate/:courseId" element={<CertificatePage />} />
               <Route path="learn/:courseId" element={<CourseOverviewPage />} />
               <Route path="learn/:courseId/modules/:moduleId/lesson/:lessonId" element={<LessonPlayerPage />} />
               <Route path="learn/:courseId/modules/:moduleId/quiz/:quizId" element={<QuizPage />} />

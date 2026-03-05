@@ -95,9 +95,9 @@ export const mockEnrollments: Enrollment[] = [
   {
     courseId: "1",
     enrolledAt: "2025-12-01",
-    progress: 45,
-    completedLessons: ["v1", "v2", "v3"],
-    completedActivities: ["a1"],
+    progress: 100,
+    completedLessons: ["v1", "v2", "v3", "v4", "v5", "v6"],
+    completedActivities: ["a1", "a2"],
   },
   {
     courseId: "2",
