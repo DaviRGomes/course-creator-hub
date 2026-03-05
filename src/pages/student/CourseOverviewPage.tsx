@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BookOpen, CheckCircle2, Circle, PlayCircle, FileQuestion } from "lucide-react";
+import { ArrowLeft, Award, BookOpen, CheckCircle2, Circle, PlayCircle, FileQuestion } from "lucide-react";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -74,6 +74,15 @@ const CourseOverviewPage = () => {
                   <span className="font-medium text-foreground">{enrollment.progress}%</span>
                 </div>
                 <Progress value={enrollment.progress} className="h-2" />
+                {enrollment.progress === 100 && (
+                  <Button
+                    className="mt-3 gap-2"
+                    onClick={() => navigate(`/certificate/${courseId}`)}
+                  >
+                    <Award className="h-4 w-4" />
+                    Ver Certificado
+                  </Button>
+                )}
               </div>
             )}
           </div>

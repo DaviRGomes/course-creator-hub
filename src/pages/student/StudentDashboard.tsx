@@ -4,7 +4,7 @@ import { mockCourses, mockEnrollments } from "@/lib/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, PlayCircle, Trophy, TrendingUp } from "lucide-react";
+import { Award, BookOpen, PlayCircle, Trophy, TrendingUp } from "lucide-react";
 
 const StudentDashboard = () => {
   const { email } = useAuth();
@@ -84,7 +84,11 @@ const StudentDashboard = () => {
                     {ec.completedLessons.length} aulas concluídas
                   </p>
                 </div>
-                <PlayCircle className="h-5 w-5 text-primary shrink-0" />
+                {ec.progress === 100 ? (
+                  <Award className="h-5 w-5 text-success shrink-0" />
+                ) : (
+                  <PlayCircle className="h-5 w-5 text-primary shrink-0" />
+                )}
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
@@ -93,6 +97,19 @@ const StudentDashboard = () => {
                 </div>
                 <Progress value={ec.progress} className="h-2" />
               </div>
+              {ec.progress === 100 && (
+                <Button
+                  size="sm"
+                  className="w-full mt-3 gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/certificate/${ec.courseId}`);
+                  }}
+                >
+                  <Award className="h-4 w-4" />
+                  Ver Certificado
+                </Button>
+              )}
             </div>
           ))}
         </div>
