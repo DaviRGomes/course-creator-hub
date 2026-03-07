@@ -156,7 +156,7 @@ const ModuleDetailPage = () => {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
-        <Link to={`/courses/${courseId}`} className="hover:text-foreground transition-fast flex items-center gap-1"><ChevronLeft className="h-4 w-4" /> Módulos</Link>
+        <Link to={`/admin/courses/${courseId}`} className="hover:text-foreground transition-fast flex items-center gap-1"><ChevronLeft className="h-4 w-4" /> Módulos</Link>
         <span>/</span>
         <span className="text-foreground">{moduleData?.title || "..."}</span>
       </div>

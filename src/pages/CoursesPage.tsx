@@ -94,7 +94,7 @@ const CoursesPage = () => {
                 <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{c.description}</p>
                 {c.modulesCount !== undefined && <p className="text-xs text-muted-foreground mb-3">{c.modulesCount} módulos</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/courses/${c.id}`)}>Gerenciar</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/admin/courses/${c.id}`)}>Gerenciar</Button>
                   <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>

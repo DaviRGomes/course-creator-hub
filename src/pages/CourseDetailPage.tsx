@@ -110,7 +110,7 @@ const CourseDetailPage = () => {
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/courses/${id}/modules/${m.id}`)}>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/courses/${id}/modules/${m.id}`)}>
                         <Eye className="h-4 w-4" /> Ver
                       </Button>
                     </div>
