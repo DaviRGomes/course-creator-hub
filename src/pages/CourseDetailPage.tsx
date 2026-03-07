@@ -187,8 +187,8 @@ const CourseDetailPage = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <BookOpen className="h-5 w-5 text-primary" />
                   <h2 className="text-xl font-semibold text-foreground">{course?.title}</h2>
-                  <Badge variant={course?.active ? "default" : "outline"} className={course?.active ? "bg-success text-success-foreground" : ""}>
-                    {course?.active ? "Ativo" : "Inativo"}
+                  <Badge variant={(course?.active ?? true) ? "default" : "outline"} className={(course?.active ?? true) ? "bg-success text-success-foreground" : ""}>
+                    {(course?.active ?? true) ? "Ativo" : "Inativo"}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{course?.description || "Sem descrição."}</p>
