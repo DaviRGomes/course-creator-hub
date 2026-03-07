@@ -29,17 +29,17 @@ export const mockModules: Record<string, Array<{ id: string; title: string; desc
   ],
 };
 
-export const mockVideos: Record<string, Array<{ id: string; title: string; url: string; duration: number; orderIndex: number }>> = {
+export const mockVideos: Record<string, Array<{ id: string; title: string; url: string; duration: number; orderIndex: number; sequenceOrder: number }>> = {
   "m1": [
-    { id: "v1", title: "Introdução ao Siege", url: "https://youtube.com/watch?v=example1", duration: 630, orderIndex: 0 },
-    { id: "v2", title: "Conceitos Básicos", url: "https://youtube.com/watch?v=example2", duration: 495, orderIndex: 1 },
-    { id: "v3", title: "Mapas e Posições", url: "https://youtube.com/watch?v=example3", duration: 720, orderIndex: 3 },
-    { id: "v4", title: "Operadores Essenciais", url: "https://youtube.com/watch?v=example4", duration: 540, orderIndex: 4 },
-    { id: "v5", title: "Comunicação em Equipe", url: "https://youtube.com/watch?v=example5", duration: 390, orderIndex: 5 },
+    { id: "v1", title: "Introdução ao Siege", url: "https://youtube.com/watch?v=example1", duration: 630, orderIndex: 0, sequenceOrder: 0 },
+    { id: "v2", title: "Conceitos Básicos", url: "https://youtube.com/watch?v=example2", duration: 495, orderIndex: 1, sequenceOrder: 1 },
+    { id: "v3", title: "Mapas e Posições", url: "https://youtube.com/watch?v=example3", duration: 720, orderIndex: 3, sequenceOrder: 3 },
+    { id: "v4", title: "Operadores Essenciais", url: "https://youtube.com/watch?v=example4", duration: 540, orderIndex: 4, sequenceOrder: 4 },
+    { id: "v5", title: "Comunicação em Equipe", url: "https://youtube.com/watch?v=example5", duration: 390, orderIndex: 5, sequenceOrder: 5 },
   ],
   "m2": [
-    { id: "v6", title: "Peeking Avançado", url: "https://youtube.com/watch?v=example6", duration: 600, orderIndex: 0 },
-    { id: "v7", title: "Strats de Ataque", url: "https://youtube.com/watch?v=example7", duration: 480, orderIndex: 1 },
+    { id: "v6", title: "Peeking Avançado", url: "https://youtube.com/watch?v=example6", duration: 600, orderIndex: 0, sequenceOrder: 0 },
+    { id: "v7", title: "Strats de Ataque", url: "https://youtube.com/watch?v=example7", duration: 480, orderIndex: 1, sequenceOrder: 1 },
   ],
 };
 

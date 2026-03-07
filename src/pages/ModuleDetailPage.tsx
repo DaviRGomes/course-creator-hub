@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2 } from "lucide-react";
 
-interface VideoItem { id: string; title: string; url: string; duration: number; orderIndex: number; }
+interface VideoItem { id: string; title: string; url: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
 interface Question { id?: string; questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; }
 interface Activity { id: string; title: string; description: string; sequenceOrder: number; passingScore: number; questions?: Question[]; }
@@ -39,7 +39,7 @@ const ModuleDetailPage = () => {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string } | null>(null);
 
-  const [videoForm, setVideoForm] = useState({ title: "", url: "", duration: 0, orderIndex: 0 });
+  const [videoForm, setVideoForm] = useState({ title: "", url: "", duration: 0, sequenceOrder: 0 });
   const [actForm, setActForm] = useState({ title: "", description: "", sequenceOrder: 0, passingScore: 70 });
   const [qForm, setQForm] = useState<{ questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; correctAnswer: string }>({
     questionText: "", questionType: "MULTIPLE_CHOICE", orderIndex: 0, points: 10, options: [
@@ -88,11 +88,7 @@ const ModuleDetailPage = () => {
   const sequence: SequenceItem[] = [
     ...videos.map((v) => ({ type: "video" as const, data: v })),
     ...activities.map((a) => ({ type: "activity" as const, data: a })),
-  ].sort((a, b) => {
-    const orderA = a.type === "video" ? a.data.orderIndex : a.data.sequenceOrder;
-    const orderB = b.type === "video" ? b.data.orderIndex : b.data.sequenceOrder;
-    return orderA - orderB;
-  });
+  ].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder);
 
   const demoAction = () => { toast.info("Modo demo — ação simulada"); return Promise.resolve(); };
 
@@ -149,8 +145,8 @@ const ModuleDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
-  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", url: "", duration: 0, orderIndex: sequence.length }); setVideoModalOpen(true); };
-  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, url: v.url, duration: v.duration, orderIndex: v.orderIndex }); setVideoModalOpen(true); };
+  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", url: "", duration: 0, sequenceOrder: sequence.length }); setVideoModalOpen(true); };
+  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, url: v.url, duration: v.duration, sequenceOrder: v.sequenceOrder }); setVideoModalOpen(true); };
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
   const openEditActivity = (a: Activity) => { setEditingActivity(a); setActForm({ title: a.title, description: a.description, sequenceOrder: a.sequenceOrder, passingScore: a.passingScore }); setActivityModalOpen(true); };
   const openQuestions = (a: Activity) => { setActiveActForQuestions(a); };
@@ -192,7 +188,7 @@ const ModuleDetailPage = () => {
             <TableBody>
               {sequence.map((item) => (
                 <TableRow key={`${item.type}-${item.data.id}`}>
-                  <TableCell className="text-muted-foreground">{item.type === "video" ? item.data.orderIndex : (item.data as Activity).sequenceOrder}</TableCell>
+                  <TableCell className="text-muted-foreground">{item.data.sequenceOrder}</TableCell>
                   <TableCell>
                     {item.type === "video" ? (
                       <Badge variant="secondary" className="gap-1"><Video className="h-3 w-3" /> Aula</Badge>
@@ -270,7 +266,7 @@ const ModuleDetailPage = () => {
             <div className="space-y-2"><Label>URL do vídeo</Label><Input value={videoForm.url} onChange={(e) => setVideoForm({ ...videoForm, url: e.target.value })} placeholder="YouTube, Vimeo ou Google Drive" required /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Duração (seg)</Label><Input type="number" value={videoForm.duration} onChange={(e) => setVideoForm({ ...videoForm, duration: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.orderIndex} onChange={(e) => setVideoForm({ ...videoForm, orderIndex: Number(e.target.value) })} /></div>
+              <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.sequenceOrder} onChange={(e) => setVideoForm({ ...videoForm, sequenceOrder: Number(e.target.value) })} /></div>
             </div>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setVideoModalOpen(false)}>Cancelar</Button>
