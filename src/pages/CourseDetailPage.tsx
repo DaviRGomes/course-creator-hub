@@ -120,7 +120,7 @@ const CourseDetailPage = () => {
 
   const startEditCourse = () => {
     if (course) {
-      setCourseForm({ title: course.title, description: course.description, thumbnail: course.thumbnail, active: course.active });
+      setCourseForm({ title: course.title ?? "", description: course.description ?? "", thumbnail: course.thumbnail ?? "", active: course.active ?? true });
       setEditingCourse(true);
     }
   };
