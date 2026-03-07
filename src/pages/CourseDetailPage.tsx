@@ -73,7 +73,7 @@ const CourseDetailPage = () => {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
-        <Link to="/courses" className="hover:text-foreground transition-fast flex items-center gap-1"><ChevronLeft className="h-4 w-4" /> Cursos</Link>
+        <Link to="/admin/courses" className="hover:text-foreground transition-fast flex items-center gap-1"><ChevronLeft className="h-4 w-4" /> Cursos</Link>
         <span>/</span>
         <span className="text-foreground">{course?.title || "..."}</span>
       </div>
