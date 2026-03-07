@@ -38,7 +38,10 @@ const CoursesPage = () => {
     queryKey: ["courses"],
     queryFn: () => {
       if (DEMO_MODE) return Promise.resolve(mockCourses);
-      return api.get("/courses").then((r) => r.data.data ?? r.data);
+      return api.get("/courses").then((r) => {
+        const payload = r.data.data ?? r.data;
+        return Array.isArray(payload) ? payload : (payload.content ?? []);
+      });
     },
   });
 
