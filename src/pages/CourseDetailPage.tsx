@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, Layers, Loader2, Save, BookOpen } from "lucide-react";
+import { CourseEnrollments } from "@/components/CourseEnrollments";
 
 interface Module {
   id: string;
@@ -259,6 +260,10 @@ const CourseDetailPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Separator className="my-6" />
+
+      {id && <CourseEnrollments courseId={id} />}
 
       <ConfirmDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)} loading={deleteMut.isPending} />
       <ConfirmDialog open={deleteCourseOpen} onOpenChange={() => setDeleteCourseOpen(false)} onConfirm={() => deleteCourseMut.mutate()} loading={deleteCourseMut.isPending} />
