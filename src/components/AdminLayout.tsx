@@ -1,8 +1,9 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, BookOpen, GraduationCap, LogOut, Menu, X } from "lucide-react";
+import { Users, BookOpen, GraduationCap, LogOut, Menu, X, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { to: "/admin/users", label: "Usuários", icon: Users },
@@ -13,6 +14,7 @@ const AdminLayout = () => {
   const { logout, email } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -87,6 +89,14 @@ const AdminLayout = () => {
         <header className="sticky top-0 z-20 bg-card border-b border-border h-14 flex items-center px-4 md:px-6">
           <button className="md:hidden mr-3 text-foreground" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-fast"
+            title={theme === "light" ? "Modo escuro" : "Modo claro"}
+          >
+            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
         </header>
         <div className="p-4 md:p-6">
