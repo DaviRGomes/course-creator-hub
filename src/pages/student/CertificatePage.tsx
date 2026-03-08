@@ -1,22 +1,34 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { DEMO_MODE } from "@/lib/config";
-import { mockCourses, mockEnrollments } from "@/lib/mockData";
+import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Award, Download } from "lucide-react";
-import { useRef } from "react";
 
 const CertificatePage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { email } = useAuth();
-  const certRef = useRef<HTMLDivElement>(null);
 
-  const course = DEMO_MODE ? mockCourses.find((c) => c.id === courseId) : null;
-  const enrollment = DEMO_MODE ? mockEnrollments.find((e) => e.courseId === courseId) : null;
+  const { data: course, isLoading } = useQuery({
+    queryKey: ["course", courseId],
+    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+  });
 
-  if (!course || !enrollment || enrollment.progress < 100) {
+  const studentName = email?.split("@")[0] || "Aluno";
+  const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+  if (isLoading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96 rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!course) {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">Certificado não disponível.</p>
@@ -26,17 +38,6 @@ const CertificatePage = () => {
       </div>
     );
   }
-
-  const studentName = email?.split("@")[0] || "Aluno";
-  const today = new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   return (
     <div>
@@ -48,17 +49,13 @@ const CertificatePage = () => {
       </button>
 
       <div className="print:hidden mb-4 flex justify-end">
-        <Button onClick={handlePrint} className="gap-2">
+        <Button onClick={() => window.print()} className="gap-2">
           <Download className="h-4 w-4" />
           Imprimir / Salvar PDF
         </Button>
       </div>
 
-      {/* Certificate */}
-      <div
-        ref={certRef}
-        className="bg-card border-2 border-primary/20 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto text-center print:border-primary print:shadow-none"
-      >
+      <div className="bg-card border-2 border-primary/20 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto text-center print:border-primary print:shadow-none">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Award className="h-8 w-8 text-primary" />

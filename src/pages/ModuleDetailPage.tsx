@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { DEMO_MODE } from "@/lib/config";
-import { mockVideos, mockActivities, mockModules } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,38 +49,19 @@ const ModuleDetailPage = () => {
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
-  // Find module name from mock data
-  const findModuleName = () => {
-    if (!DEMO_MODE) return null;
-    for (const modules of Object.values(mockModules)) {
-      const found = modules.find((m) => m.id === moduleId);
-      if (found) return found;
-    }
-    return null;
-  };
-
   const { data: moduleData } = useQuery({
     queryKey: ["module", moduleId],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(findModuleName() || { id: moduleId, title: "Módulo", description: "" });
-      return api.get(base).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(base).then((r) => r.data.data ?? r.data),
   });
 
   const { data: videos = [], isLoading: vLoading } = useQuery<VideoItem[]>({
     queryKey: ["videos", moduleId],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockVideos[moduleId!] || []);
-      return api.get(`${base}/videos`).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(`${base}/videos`).then((r) => r.data.data ?? r.data),
   });
 
   const { data: activities = [], isLoading: aLoading } = useQuery<Activity[]>({
     queryKey: ["activities", moduleId],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockActivities[moduleId!] || []);
-      return api.get(`${base}/activities`).then((r) => r.data.data ?? r.data).catch(() => []);
-    },
+    queryFn: () => api.get(`${base}/activities`).then((r) => r.data.data ?? r.data).catch(() => []),
   });
 
   const sequence: SequenceItem[] = [
@@ -90,23 +69,21 @@ const ModuleDetailPage = () => {
     ...activities.map((a) => ({ type: "activity" as const, data: a })),
   ].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder);
 
-  const demoAction = () => { toast.info("Modo demo — ação simulada"); return Promise.resolve(); };
-
   const saveVideoMut = useMutation({
-    mutationFn: () => {
-      if (DEMO_MODE) return demoAction();
-      return editingVideo ? api.put(`${base}/videos/${editingVideo.id}`, videoForm).then(() => {}) : api.post(`${base}/videos`, videoForm).then(() => {});
-    },
+    mutationFn: () =>
+      editingVideo
+        ? api.put(`${base}/videos/${editingVideo.id}`, videoForm).then(() => {})
+        : api.post(`${base}/videos`, videoForm).then(() => {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["videos", moduleId] }); setVideoModalOpen(false); setEditingVideo(null); toast.success("Aula salva"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
   const saveActMut = useMutation({
-    mutationFn: () => {
-      if (DEMO_MODE) return demoAction();
-      return editingActivity ? api.put(`${base}/activities/${editingActivity.id}`, actForm).then(() => {}) : api.post(`${base}/activities`, actForm).then(() => {});
-    },
-    onSuccess: (res) => {
+    mutationFn: () =>
+      editingActivity
+        ? api.put(`${base}/activities/${editingActivity.id}`, actForm).then(() => {})
+        : api.post(`${base}/activities`, actForm).then(() => {}),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
       setActivityModalOpen(false);
       setEditingActivity(null);
@@ -116,10 +93,10 @@ const ModuleDetailPage = () => {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (t: { type: string; id: string }) => {
-      if (DEMO_MODE) return demoAction();
-      return t.type === "video" ? api.delete(`${base}/videos/${t.id}`).then(() => {}) : api.delete(`${base}/activities/${t.id}`).then(() => {});
-    },
+    mutationFn: (t: { type: string; id: string }) =>
+      t.type === "video"
+        ? api.delete(`${base}/videos/${t.id}`).then(() => {})
+        : api.delete(`${base}/activities/${t.id}`).then(() => {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos", moduleId] });
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
@@ -130,7 +107,6 @@ const ModuleDetailPage = () => {
 
   const saveQuestionMut = useMutation({
     mutationFn: () => {
-      if (DEMO_MODE) return demoAction();
       const payload: any = { questionText: qForm.questionText, questionType: qForm.questionType, orderIndex: qForm.orderIndex, points: qForm.points };
       if (qForm.questionType === "MULTIPLE_CHOICE") payload.options = qForm.options;
       else if (qForm.questionType === "TRUE_FALSE") {
@@ -149,7 +125,6 @@ const ModuleDetailPage = () => {
   const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, url: v.url, duration: v.duration, sequenceOrder: v.sequenceOrder }); setVideoModalOpen(true); };
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
   const openEditActivity = (a: Activity) => { setEditingActivity(a); setActForm({ title: a.title, description: a.description, sequenceOrder: a.sequenceOrder, passingScore: a.passingScore }); setActivityModalOpen(true); };
-  const openQuestions = (a: Activity) => { setActiveActForQuestions(a); };
 
   const isLoading = vLoading || aLoading;
 
@@ -205,7 +180,7 @@ const ModuleDetailPage = () => {
                       <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       {item.type === "activity" && (
-                        <Button variant="ghost" size="sm" onClick={() => openQuestions(item.data as Activity)} className="text-xs">Questões</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                       )}
                     </div>
                   </TableCell>
@@ -216,7 +191,6 @@ const ModuleDetailPage = () => {
         </div>
       )}
 
-      {/* Questions panel */}
       {activeActForQuestions && (
         <div className="mt-6 bg-card rounded-lg border border-border p-4">
           <div className="flex items-center justify-between mb-4">
@@ -257,7 +231,6 @@ const ModuleDetailPage = () => {
         </div>
       )}
 
-      {/* Video Modal */}
       <Dialog open={videoModalOpen} onOpenChange={(o) => { setVideoModalOpen(o); if (!o) setEditingVideo(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingVideo ? "Editar Aula" : "Nova Aula"}</DialogTitle></DialogHeader>
@@ -276,7 +249,6 @@ const ModuleDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Activity Modal */}
       <Dialog open={activityModalOpen} onOpenChange={(o) => { setActivityModalOpen(o); if (!o) setEditingActivity(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingActivity ? "Editar Atividade" : "Nova Atividade"}</DialogTitle></DialogHeader>
@@ -295,7 +267,6 @@ const ModuleDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Question Modal */}
       <Dialog open={questionModalOpen} onOpenChange={setQuestionModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Nova Questão</DialogTitle></DialogHeader>

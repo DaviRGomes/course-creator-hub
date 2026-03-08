@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { DEMO_MODE } from "@/lib/config";
-import { mockCourses, mockModules } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,12 +40,10 @@ const CourseDetailPage = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  // Course edit state
   const [editingCourse, setEditingCourse] = useState(false);
   const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnail: "", active: true });
   const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
 
-  // Module state
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Module | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -55,29 +51,16 @@ const CourseDetailPage = () => {
 
   const { data: course, isLoading: courseLoading } = useQuery<Course>({
     queryKey: ["course", id],
-    queryFn: () => {
-      if (DEMO_MODE) {
-        const found = mockCourses.find((c) => c.id === id);
-        return Promise.resolve(found || { id: id!, title: "Curso", description: "", thumbnail: "", active: true });
-      }
-      return api.get(`/courses/${id}`).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(`/courses/${id}`).then((r) => r.data.data ?? r.data),
   });
 
   const { data: modules = [], isLoading: modulesLoading } = useQuery<Module[]>({
     queryKey: ["modules", id],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockModules[id!] || []);
-      return api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data),
   });
 
-  // Course mutations
   const updateCourseMut = useMutation({
-    mutationFn: () => {
-      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
-      return api.put(`/courses/${id}`, courseForm).then(() => {});
-    },
+    mutationFn: () => api.put(`/courses/${id}`, courseForm).then(() => {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course", id] });
       qc.invalidateQueries({ queryKey: ["courses"] });
@@ -88,10 +71,7 @@ const CourseDetailPage = () => {
   });
 
   const deleteCourseMut = useMutation({
-    mutationFn: () => {
-      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
-      return api.delete(`/courses/${id}`).then(() => {});
-    },
+    mutationFn: () => api.delete(`/courses/${id}`).then(() => {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["courses"] });
       navigate("/admin/courses", { replace: true });
@@ -100,21 +80,22 @@ const CourseDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao remover curso"),
   });
 
-  // Module mutations
   const saveMut = useMutation({
-    mutationFn: () => {
-      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
-      return editing ? api.put(`/courses/${id}/modules/${editing.id}`, form).then(() => {}) : api.post(`/courses/${id}/modules`, form).then(() => {});
+    mutationFn: () =>
+      editing
+        ? api.put(`/courses/${id}/modules/${editing.id}`, form).then(() => {})
+        : api.post(`/courses/${id}/modules`, form).then(() => {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["modules", id] });
+      setModalOpen(false);
+      setEditing(null);
+      toast.success(editing ? "Módulo atualizado" : "Módulo criado");
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["modules", id] }); setModalOpen(false); setEditing(null); toast.success(editing ? "Módulo atualizado" : "Módulo criado"); },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro"),
   });
 
   const deleteMut = useMutation({
-    mutationFn: (moduleId: string) => {
-      if (DEMO_MODE) { toast.info("Modo demo — ação simulada"); return Promise.resolve(); }
-      return api.delete(`/courses/${id}/modules/${moduleId}`).then(() => {});
-    },
+    mutationFn: (moduleId: string) => api.delete(`/courses/${id}/modules/${moduleId}`).then(() => {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["modules", id] }); setDeleteTarget(null); toast.success("Módulo removido"); },
   });
 
@@ -130,7 +111,6 @@ const CourseDetailPage = () => {
 
   return (
     <div>
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
         <Link to="/admin/courses" className="hover:text-foreground transition-fast flex items-center gap-1">
           <ChevronLeft className="h-4 w-4" /> Cursos
@@ -139,7 +119,6 @@ const CourseDetailPage = () => {
         <span className="text-foreground">{course?.title || "..."}</span>
       </div>
 
-      {/* Course Info Section */}
       <div className="bg-card rounded-lg border border-border p-6 mt-4 mb-6">
         {courseLoading ? (
           <div className="space-y-3">
@@ -218,7 +197,6 @@ const CourseDetailPage = () => {
 
       <Separator className="mb-6" />
 
-      {/* Modules Section */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground">Módulos</h3>
         <Button onClick={openCreate}><Plus className="h-4 w-4" /> Novo Módulo</Button>
@@ -265,7 +243,6 @@ const CourseDetailPage = () => {
         </div>
       )}
 
-      {/* Module Modal */}
       <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setEditing(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar Módulo" : "Novo Módulo"}</DialogTitle></DialogHeader>
@@ -283,10 +260,7 @@ const CourseDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Module */}
       <ConfirmDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)} loading={deleteMut.isPending} />
-
-      {/* Delete Course */}
       <ConfirmDialog open={deleteCourseOpen} onOpenChange={() => setDeleteCourseOpen(false)} onConfirm={() => deleteCourseMut.mutate()} loading={deleteCourseMut.isPending} />
     </div>
   );

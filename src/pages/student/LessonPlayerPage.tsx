@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { DEMO_MODE } from "@/lib/config";
-import { mockVideos, mockModules, mockCourses } from "@/lib/mockData";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,18 +19,48 @@ const LessonPlayerPage = () => {
   const navigate = useNavigate();
   const [completed, setCompleted] = useState(false);
 
-  const course = DEMO_MODE ? mockCourses.find((c) => c.id === courseId) : null;
-  const moduleData = DEMO_MODE ? (mockModules[courseId!] || []).find((m) => m.id === moduleId) : null;
-  const videos = DEMO_MODE ? (mockVideos[moduleId!] || []) : [];
-  const currentVideo = videos.find((v) => v.id === lessonId);
-  const currentIndex = videos.findIndex((v) => v.id === lessonId);
+  const { data: course } = useQuery({
+    queryKey: ["course", courseId],
+    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+  });
+
+  const { data: moduleData } = useQuery({
+    queryKey: ["module", moduleId],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}`).then((r) => r.data.data ?? r.data),
+  });
+
+  const { data: videos = [], isLoading: loadingVideos } = useQuery<any[]>({
+    queryKey: ["videos", moduleId],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/videos`).then((r) => r.data.data ?? r.data),
+  });
+
+  const watchMut = useMutation({
+    mutationFn: () =>
+      api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
+    onSuccess: () => {
+      setCompleted(true);
+      toast.success("Aula marcada como concluída!");
+    },
+    onError: () => {
+      setCompleted(true);
+      toast.success("Aula marcada como concluída!");
+    },
+  });
+
+  const currentVideo = videos.find((v) => String(v.id) === lessonId);
+  const currentIndex = videos.findIndex((v) => String(v.id) === lessonId);
   const prevVideo = currentIndex > 0 ? videos[currentIndex - 1] : null;
   const nextVideo = currentIndex < videos.length - 1 ? videos[currentIndex + 1] : null;
 
-  const handleMarkComplete = () => {
-    setCompleted(true);
-    toast.success("Aula marcada como concluída!");
-  };
+  if (loadingVideos) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="aspect-video rounded-xl" />
+        <Skeleton className="h-6 w-64" />
+      </div>
+    );
+  }
 
   if (!currentVideo) {
     return (
@@ -50,7 +81,6 @@ const LessonPlayerPage = () => {
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Video player area */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
             <div className="text-center">
@@ -67,8 +97,8 @@ const LessonPlayerPage = () => {
             </div>
             <Button
               variant={completed ? "default" : "outline"}
-              onClick={handleMarkComplete}
-              disabled={completed}
+              onClick={() => watchMut.mutate()}
+              disabled={completed || watchMut.isPending}
               className={completed ? "bg-success hover:bg-success" : ""}
             >
               <CheckCircle2 className="h-4 w-4" />
@@ -76,28 +106,20 @@ const LessonPlayerPage = () => {
             </Button>
           </div>
 
-          {/* Navigation */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
             {prevVideo ? (
-              <Button
-                variant="ghost"
-                onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${prevVideo.id}`)}
-              >
+              <Button variant="ghost" onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${prevVideo.id}`)}>
                 <ArrowLeft className="h-4 w-4" /> {prevVideo.title}
               </Button>
             ) : <div />}
             {nextVideo ? (
-              <Button
-                variant="ghost"
-                onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${nextVideo.id}`)}
-              >
+              <Button variant="ghost" onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${nextVideo.id}`)}>
                 {nextVideo.title} <ArrowRight className="h-4 w-4" />
               </Button>
             ) : <div />}
           </div>
         </div>
 
-        {/* Sidebar with lesson list */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="p-4 border-b border-border">
             <h3 className="font-semibold text-sm text-foreground">Aulas do módulo</h3>
@@ -109,12 +131,12 @@ const LessonPlayerPage = () => {
                 onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${v.id}`)}
                 className={cn(
                   "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast hover:bg-accent/50",
-                  v.id === lessonId && "bg-primary/5 border-l-2 border-l-primary"
+                  String(v.id) === lessonId && "bg-primary/5 border-l-2 border-l-primary"
                 )}
               >
                 <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm truncate", v.id === lessonId ? "text-primary font-medium" : "text-foreground")}>
+                  <p className={cn("text-sm truncate", String(v.id) === lessonId ? "text-primary font-medium" : "text-foreground")}>
                     {v.title}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatDuration(v.duration)}</p>

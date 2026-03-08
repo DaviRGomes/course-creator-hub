@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { DEMO_MODE } from "@/lib/config";
-import { mockActivities, mockCourses, mockModules } from "@/lib/mockData";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -11,13 +12,64 @@ const QuizPage = () => {
   const { courseId, moduleId, quizId } = useParams();
   const navigate = useNavigate();
 
-  const course = DEMO_MODE ? mockCourses.find((c) => c.id === courseId) : null;
-  const moduleData = DEMO_MODE ? (mockModules[courseId!] || []).find((m) => m.id === moduleId) : null;
-  const activities = DEMO_MODE ? (mockActivities[moduleId!] || []) : [];
-  const activity = activities.find((a) => a.id === quizId);
-
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const { data: course } = useQuery({
+    queryKey: ["course", courseId],
+    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+  });
+
+  const { data: moduleData } = useQuery({
+    queryKey: ["module", moduleId],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}`).then((r) => r.data.data ?? r.data),
+  });
+
+  const { data: activity, isLoading } = useQuery({
+    queryKey: ["activity", quizId],
+    queryFn: () =>
+      api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}`)
+        .then((r) => r.data.data ?? r.data),
+  });
+
+  const submitMut = useMutation({
+    mutationFn: () => {
+      const answersPayload = Object.entries(answers).map(([questionId, optionIndex]) => ({
+        questionId,
+        selectedOptionIndex: optionIndex,
+      }));
+      return api.post(
+        `/courses/${courseId}/modules/${moduleId}/activities/${quizId}/submit`,
+        { answers: answersPayload }
+      ).then((r) => r.data.data ?? r.data);
+    },
+    onSuccess: (data) => setResult(data),
+    onError: () => {
+      // Fallback: calculate locally if submit endpoint not available
+      const questions = activity?.questions || [];
+      let earned = 0;
+      let total = 0;
+      questions.forEach((q: any) => {
+        total += q.points;
+        const selected = answers[q.id];
+        if (selected !== undefined && q.options?.[selected]?.isCorrect) {
+          earned += q.points;
+        }
+      });
+      const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
+      setResult({ earned, total, score: pct, passed: pct >= (activity?.passingScore || 70) });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
+    );
+  }
 
   if (!activity) {
     return (
@@ -29,31 +81,14 @@ const QuizPage = () => {
   }
 
   const questions = activity.questions || [];
+  const submitted = result !== null;
+  const passed = result?.passed ?? false;
+  const score = result ? (result.score ?? result.pct ?? 0) : 0;
 
   const handleSelect = (questionId: string, optionIndex: number) => {
     if (submitted) return;
     setAnswers({ ...answers, [questionId]: optionIndex });
   };
-
-  const handleSubmit = () => {
-    setSubmitted(true);
-  };
-
-  const getScore = () => {
-    let earned = 0;
-    let total = 0;
-    questions.forEach((q) => {
-      total += q.points;
-      const selected = answers[q.id];
-      if (selected !== undefined && q.options[selected]?.isCorrect) {
-        earned += q.points;
-      }
-    });
-    return { earned, total, pct: total > 0 ? Math.round((earned / total) * 100) : 0 };
-  };
-
-  const score = submitted ? getScore() : null;
-  const passed = score ? score.pct >= activity.passingScore : false;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -80,33 +115,20 @@ const QuizPage = () => {
         </div>
       ) : (
         <>
-          {/* Result banner */}
-          {submitted && score && (
-            <div
-              className={cn(
-                "rounded-xl p-5 mb-6 flex items-center gap-4",
-                passed ? "bg-success/10 border border-success/20" : "bg-destructive/10 border border-destructive/20"
-              )}
-            >
-              {passed ? (
-                <CheckCircle2 className="h-8 w-8 text-success shrink-0" />
-              ) : (
-                <XCircle className="h-8 w-8 text-destructive shrink-0" />
-              )}
+          {submitted && (
+            <div className={cn("rounded-xl p-5 mb-6 flex items-center gap-4", passed ? "bg-success/10 border border-success/20" : "bg-destructive/10 border border-destructive/20")}>
+              {passed ? <CheckCircle2 className="h-8 w-8 text-success shrink-0" /> : <XCircle className="h-8 w-8 text-destructive shrink-0" />}
               <div>
                 <p className={cn("font-semibold", passed ? "text-success" : "text-destructive")}>
                   {passed ? "Aprovado!" : "Reprovado"}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Pontuação: {score.earned}/{score.total} ({score.pct}%)
-                </p>
+                <p className="text-sm text-muted-foreground">Pontuação: {score}%</p>
               </div>
             </div>
           )}
 
-          {/* Questions */}
           <div className="space-y-6">
-            {questions.map((q, qIdx) => {
+            {questions.map((q: any, qIdx: number) => {
               const selectedOption = answers[q.id];
               return (
                 <div key={q.id} className="bg-card border border-border rounded-xl p-5">
@@ -119,7 +141,7 @@ const QuizPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    {q.options.map((opt, oIdx) => {
+                    {(q.options || []).map((opt: any, oIdx: number) => {
                       const isSelected = selectedOption === oIdx;
                       const showCorrect = submitted && opt.isCorrect;
                       const showWrong = submitted && isSelected && !opt.isCorrect;
@@ -138,9 +160,7 @@ const QuizPage = () => {
                             submitted && !showCorrect && !showWrong && "border-border text-muted-foreground opacity-60"
                           )}
                         >
-                          <span className="font-medium mr-2">
-                            {String.fromCharCode(65 + oIdx)}.
-                          </span>
+                          <span className="font-medium mr-2">{String.fromCharCode(65 + oIdx)}.</span>
                           {opt.optionText}
                           {showCorrect && <CheckCircle2 className="inline h-4 w-4 ml-2" />}
                           {showWrong && <XCircle className="inline h-4 w-4 ml-2" />}
@@ -156,8 +176,8 @@ const QuizPage = () => {
           {!submitted && (
             <div className="mt-6 flex justify-end">
               <Button
-                onClick={handleSubmit}
-                disabled={Object.keys(answers).length < questions.length}
+                onClick={() => submitMut.mutate()}
+                disabled={Object.keys(answers).length < questions.length || submitMut.isPending}
               >
                 Enviar Respostas
               </Button>
@@ -166,7 +186,7 @@ const QuizPage = () => {
 
           {submitted && (
             <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={() => { setAnswers({}); setSubmitted(false); }}>
+              <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
                 Refazer
               </Button>
               <Button onClick={() => navigate(`/learn/${courseId}`)}>

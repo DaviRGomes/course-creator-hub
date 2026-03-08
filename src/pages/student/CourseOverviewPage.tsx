@@ -1,13 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { DEMO_MODE } from "@/lib/config";
-import { mockCourses, mockModules, mockVideos, mockActivities, mockEnrollments } from "@/lib/mockData";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Award, BookOpen, CheckCircle2, Circle, PlayCircle, FileQuestion } from "lucide-react";
+import { ArrowLeft, BookOpen, PlayCircle, FileQuestion, Circle } from "lucide-react";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -21,33 +18,34 @@ const CourseOverviewPage = () => {
 
   const { data: course, isLoading: loadingCourse } = useQuery({
     queryKey: ["student-course", courseId],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockCourses.find((c) => c.id === courseId));
-      return api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
   });
 
   const { data: modules = [], isLoading: loadingModules } = useQuery({
     queryKey: ["student-modules", courseId],
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockModules[courseId!] || []);
-      return api.get(`/courses/${courseId}/modules`).then((r) => r.data.data ?? r.data);
-    },
+    queryFn: () => api.get(`/courses/${courseId}/modules`).then((r) => r.data.data ?? r.data),
   });
 
-  const enrollment = DEMO_MODE
-    ? mockEnrollments.find((e) => e.courseId === courseId)
-    : null;
+  const sequenceQueries = useQueries({
+    queries: modules.map((mod: any) => ({
+      queryKey: ["module-sequence", courseId, mod.id],
+      queryFn: () =>
+        api.get(`/courses/${courseId}/modules/${mod.id}/sequence`)
+          .then((r) => r.data.data ?? r.data)
+          .catch(() => []),
+      enabled: modules.length > 0,
+    })),
+  });
 
   const isLoading = loadingCourse || loadingModules;
 
   return (
     <div>
       <button
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/catalog")}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-fast mb-4"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar ao painel
+        <ArrowLeft className="h-4 w-4" /> Catálogo
       </button>
 
       {isLoading ? (
@@ -58,7 +56,6 @@ const CourseOverviewPage = () => {
         </div>
       ) : (
         <>
-          {/* Course header */}
           <div className="bg-card border border-border rounded-xl p-6 mb-6">
             <div className="flex items-start justify-between">
               <div>
@@ -67,40 +64,14 @@ const CourseOverviewPage = () => {
               </div>
               <BookOpen className="h-8 w-8 text-primary/30 shrink-0" />
             </div>
-            {enrollment && (
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Progresso geral</span>
-                  <span className="font-medium text-foreground">{enrollment.progress}%</span>
-                </div>
-                <Progress value={enrollment.progress} className="h-2" />
-                {enrollment.progress === 100 && (
-                  <Button
-                    className="mt-3 gap-2"
-                    onClick={() => navigate(`/certificate/${courseId}`)}
-                  >
-                    <Award className="h-4 w-4" />
-                    Ver Certificado
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Modules */}
           <h2 className="text-lg font-semibold text-foreground mb-4">Módulos</h2>
           <div className="space-y-3">
             {modules.map((mod: any, idx: number) => {
-              const videos = DEMO_MODE ? (mockVideos[mod.id] || []) : [];
-              const activities = DEMO_MODE ? (mockActivities[mod.id] || []) : [];
-
-              // Build sequence
-              const sequence = [
-                ...videos.map((v: any) => ({ type: "video" as const, ...v, completed: enrollment?.completedLessons.includes(v.id) })),
-                ...activities.map((a: any) => ({ type: "activity" as const, id: a.id, title: a.title, orderIndex: a.sequenceOrder, completed: enrollment?.completedActivities.includes(a.id) })),
-              ].sort((a, b) => a.orderIndex - b.orderIndex);
-
-              const completedCount = sequence.filter((s) => s.completed).length;
+              const seqData = sequenceQueries[idx];
+              const sequence: any[] = seqData?.data ?? [];
+              const loading = seqData?.isLoading ?? true;
 
               return (
                 <div key={mod.id} className="bg-card border border-border rounded-xl overflow-hidden">
@@ -109,7 +80,7 @@ const CourseOverviewPage = () => {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Módulo {idx + 1}</span>
                         <Badge variant="outline" className="text-xs">
-                          {completedCount}/{sequence.length}
+                          {sequence.length} itens
                         </Badge>
                       </div>
                       <h3 className="font-semibold text-foreground mt-0.5">{mod.title}</h3>
@@ -118,34 +89,38 @@ const CourseOverviewPage = () => {
                   </div>
 
                   <div className="border-t border-border divide-y divide-border">
-                    {sequence.map((item) => (
-                      <button
-                        key={item.id}
-                        className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-accent/50 transition-fast"
-                        onClick={() => {
-                          if (item.type === "video") {
-                            navigate(`/learn/${courseId}/modules/${mod.id}/lesson/${item.id}`);
-                          } else {
-                            navigate(`/learn/${courseId}/modules/${mod.id}/quiz/${item.id}`);
-                          }
-                        }}
-                      >
-                        {item.completed ? (
-                          <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-                        ) : (
+                    {loading ? (
+                      <div className="px-5 py-3">
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                    ) : sequence.length === 0 ? (
+                      <p className="px-5 py-3 text-xs text-muted-foreground">Nenhum item neste módulo.</p>
+                    ) : (
+                      sequence.map((item: any) => (
+                        <button
+                          key={item.id}
+                          className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-accent/50 transition-fast"
+                          onClick={() => {
+                            if (item.type === "VIDEO") {
+                              navigate(`/learn/${courseId}/modules/${mod.id}/lesson/${item.id}`);
+                            } else {
+                              navigate(`/learn/${courseId}/modules/${mod.id}/quiz/${item.id}`);
+                            }
+                          }}
+                        >
                           <Circle className="h-4 w-4 text-border shrink-0" />
-                        )}
-                        {item.type === "video" ? (
-                          <PlayCircle className="h-4 w-4 text-primary shrink-0" />
-                        ) : (
-                          <FileQuestion className="h-4 w-4 text-amber-500 shrink-0" />
-                        )}
-                        <span className="text-sm text-foreground flex-1">{item.title}</span>
-                        {item.type === "video" && "duration" in item && (
-                          <span className="text-xs text-muted-foreground">{formatDuration(item.duration)}</span>
-                        )}
-                      </button>
-                    ))}
+                          {item.type === "VIDEO" ? (
+                            <PlayCircle className="h-4 w-4 text-primary shrink-0" />
+                          ) : (
+                            <FileQuestion className="h-4 w-4 text-amber-500 shrink-0" />
+                          )}
+                          <span className="text-sm text-foreground flex-1">{item.title}</span>
+                          {item.type === "VIDEO" && item.duration != null && (
+                            <span className="text-xs text-muted-foreground">{formatDuration(item.duration)}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               );
