@@ -36,7 +36,7 @@ const Login = () => {
             <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-3">
               <GraduationCap className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-semibold text-foreground">Painel</h1>
+            <h1 className="text-xl font-semibold text-foreground">Conexões Sociais</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
