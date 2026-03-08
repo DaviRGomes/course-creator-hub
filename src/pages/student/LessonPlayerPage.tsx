@@ -80,6 +80,9 @@ const LessonPlayerPage = () => {
       toast.success("Aula marcada como concluída!");
       queryClient.invalidateQueries({ queryKey: ["module-sequence", courseId, Number(moduleId)] });
       queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["module", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["course-overview", slug] });
+      queryClient.invalidateQueries({ queryKey: ["student-modules", courseId] });
     },
     onError: () => {
       setCompleted(true);
