@@ -16,7 +16,7 @@ const CertificatePage = () => {
     queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
   });
 
-  const studentName = email?.split("@")[0] || "Aluno";
+  const studentName = name || email?.split("@")[0] || "Aluno";
   const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
   if (isLoading) {

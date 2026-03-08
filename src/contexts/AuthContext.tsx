@@ -49,8 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_email");
+    localStorage.removeItem("admin_name");
     localStorage.removeItem("auth_role");
-    setState({ token: null, email: null, role: null, isAuthenticated: false });
+    setState({ token: null, email: null, name: null, role: null, isAuthenticated: false });
   };
 
   const isAdmin = state.role === "ADMIN";
