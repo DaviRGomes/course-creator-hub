@@ -37,11 +37,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<string> => {
     const res = await api.post("/auth/login", { email, password });
-    const { token, role } = res.data.data;
+    const { token, name, role } = res.data.data;
     localStorage.setItem("auth_token", token);
     localStorage.setItem("auth_email", email);
+    localStorage.setItem("admin_name", name || "");
     localStorage.setItem("auth_role", role);
-    setState({ token, email, role, isAuthenticated: true });
+    setState({ token, email, name: name || null, role, isAuthenticated: true });
     return role;
   };
 
