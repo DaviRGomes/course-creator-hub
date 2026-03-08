@@ -9,7 +9,7 @@ import { ArrowLeft, Award, Download } from "lucide-react";
 const CertificatePage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { email } = useAuth();
+  const { email, name } = useAuth();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
