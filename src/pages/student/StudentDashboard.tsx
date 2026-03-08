@@ -77,8 +77,7 @@ const StudentDashboard = () => {
       ) : courses.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center">
           <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground mb-4">Você ainda não está matriculado em nenhum curso.</p>
-          <Button onClick={() => navigate("/catalog")}>Ver Catálogo</Button>
+          <p className="text-muted-foreground">Você ainda não está matriculado em nenhum curso.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
