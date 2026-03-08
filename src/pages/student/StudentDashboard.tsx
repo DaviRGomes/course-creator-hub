@@ -84,22 +84,35 @@ const StudentDashboard = () => {
           {courses.map((c) => (
             <div
               key={c.id}
-              className="bg-card border border-border rounded-xl p-5 cursor-pointer transition-fast hover:shadow-md"
+              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md"
               onClick={() => navigate(`/learn/${c.id}`)}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{c.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{c.description}</p>
+              {c.thumbnail ? (
+                <img
+                  src={c.thumbnail}
+                  alt={c.title}
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
-                <PlayCircle className="h-5 w-5 text-primary shrink-0 ml-3" />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium text-foreground">{c.progress}%</span>
+              )}
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{c.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{c.description}</p>
+                  </div>
+                  <PlayCircle className="h-5 w-5 text-primary shrink-0 ml-3" />
                 </div>
-                <Progress value={c.progress} className="h-2" />
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progresso</span>
+                    <span className="font-medium text-foreground">{c.progress}%</span>
+                  </div>
+                  <Progress value={c.progress} className="h-2" />
+                </div>
               </div>
             </div>
           ))}
