@@ -13,6 +13,7 @@ import CoursesPage from "@/pages/CoursesPage";
 import CourseDetailPage from "@/pages/CourseDetailPage";
 import ModuleDetailPage from "@/pages/ModuleDetailPage";
 import StudentDashboard from "@/pages/student/StudentDashboard";
+import ProfilePage from "@/pages/student/ProfilePage";
 import CourseOverviewPage from "@/pages/student/CourseOverviewPage";
 import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
