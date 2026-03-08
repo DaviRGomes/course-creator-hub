@@ -6,7 +6,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+
+const getEmbedUrl = (url: string): string | null => {
+  if (!url) return null;
+  // Google Drive: /file/d/ID/view → /file/d/ID/preview
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  // If it's already an embeddable URL or direct video
+  if (url.match(/\.(mp4|webm|ogg)(\?|$)/)) return url;
+  return url;
+};
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -82,13 +98,32 @@ const LessonPlayerPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
-            <div className="text-center">
-              <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Player de vídeo</p>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">{currentVideo.url}</p>
-            </div>
-          </div>
+          {(() => {
+            const embedUrl = getEmbedUrl(currentVideo.url);
+            const isDirectVideo = currentVideo.url?.match(/\.(mp4|webm|ogg)(\?|$)/);
+            if (isDirectVideo) {
+              return (
+                <video controls className="w-full aspect-video rounded-xl bg-black">
+                  <source src={currentVideo.url} />
+                </video>
+              );
+            }
+            return embedUrl ? (
+              <iframe
+                src={embedUrl}
+                className="w-full aspect-video rounded-xl border border-border"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+              />
+            ) : (
+              <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
+                <div className="text-center">
+                  <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Vídeo não disponível</p>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex items-start justify-between">
             <div>
