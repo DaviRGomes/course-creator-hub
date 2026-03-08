@@ -70,7 +70,7 @@ const CourseOverviewPage = () => {
           <div className="space-y-3">
             {modules.map((mod: any, idx: number) => {
               const seqData = sequenceQueries[idx];
-              const sequence: any[] = seqData?.data ?? [];
+              const sequence: any[] = (seqData?.data as any[]) ?? [];
               const loading = seqData?.isLoading ?? true;
 
               return (

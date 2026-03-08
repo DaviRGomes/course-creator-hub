@@ -42,7 +42,7 @@ const App = () => (
             </Route>
 
             {/* Admin routes */}
-            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/users" replace />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="courses" element={<CoursesPage />} />

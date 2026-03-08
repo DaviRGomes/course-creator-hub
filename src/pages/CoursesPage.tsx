@@ -34,17 +34,10 @@ const CoursesPage = () => {
 
   const { data: courses = [], isLoading } = useQuery<Course[]>({
     queryKey: ["courses"],
-<<<<<<< HEAD
-    queryFn: () => api.get("/courses").then((r) => r.data.data ?? r.data),
-=======
-    queryFn: () => {
-      if (DEMO_MODE) return Promise.resolve(mockCourses);
-      return api.get("/courses").then((r) => {
-        const payload = r.data.data ?? r.data;
-        return Array.isArray(payload) ? payload : (payload.content ?? []);
-      });
-    },
->>>>>>> 7b907aab1500931632b06cad4a4c89b7261906b2
+    queryFn: () => api.get("/courses").then((r) => {
+      const payload = r.data.data ?? r.data;
+      return Array.isArray(payload) ? payload : (payload.content ?? []);
+    }),
   });
 
   const saveMut = useMutation({
