@@ -58,6 +58,13 @@ const StudentLayout = () => {
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:block">{email}</span>
             <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-fast"
+              title={theme === "light" ? "Modo escuro" : "Modo claro"}
+            >
+              {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </button>
+            <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-fast"
             >

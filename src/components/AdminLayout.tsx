@@ -90,6 +90,14 @@ const AdminLayout = () => {
           <button className="md:hidden mr-3 text-foreground" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
+          <div className="flex-1" />
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-fast"
+            title={theme === "light" ? "Modo escuro" : "Modo claro"}
+          >
+            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
         </header>
         <div className="p-4 md:p-6">
           <Outlet />
