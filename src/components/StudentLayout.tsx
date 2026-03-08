@@ -14,6 +14,7 @@ const StudentLayout = () => {
   const { logout, email } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
