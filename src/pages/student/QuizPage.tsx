@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +11,9 @@ import { cn } from "@/lib/utils";
 const QuizPage = () => {
   const { slug, moduleId, quizId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<any>(null);
 
   const { data: course } = useQuery({
@@ -39,30 +40,20 @@ const QuizPage = () => {
 
   const submitMut = useMutation({
     mutationFn: () => {
-      const answersPayload = Object.entries(answers).map(([questionId, optionIndex]) => ({
-        questionId,
-        selectedOptionIndex: optionIndex,
+      const answersPayload = Object.entries(answers).map(([questionId, optionId]) => ({
+        questionId: Number(questionId),
+        selectedOptionId: Number(optionId),
       }));
       return api.post(
         `/courses/${courseId}/modules/${moduleId}/activities/${quizId}/submit`,
         { answers: answersPayload }
       ).then((r) => r.data.data ?? r.data);
     },
-    onSuccess: (data) => setResult(data),
-    onError: () => {
-      // Fallback: calculate locally if submit endpoint not available
-      const questions = activity?.questions || [];
-      let earned = 0;
-      let total = 0;
-      questions.forEach((q: any) => {
-        total += q.points;
-        const selected = answers[q.id];
-        if (selected !== undefined && q.options?.[selected]?.isCorrect) {
-          earned += q.points;
-        }
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({
+        queryKey: ["module-sequence", courseId, Number(moduleId)],
       });
-      const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
-      setResult({ earned, total, score: pct, passed: pct >= (activity?.passingScore || 70) });
     },
   });
 
@@ -90,9 +81,9 @@ const QuizPage = () => {
   const passed = result?.passed ?? false;
   const score = result ? (result.score ?? result.pct ?? 0) : 0;
 
-  const handleSelect = (questionId: string, optionIndex: number) => {
+  const handleSelect = (questionId: string, optionId: string) => {
     if (submitted) return;
-    setAnswers({ ...answers, [questionId]: optionIndex });
+    setAnswers({ ...answers, [questionId]: optionId });
   };
 
   return (
@@ -134,7 +125,6 @@ const QuizPage = () => {
 
           <div className="space-y-6">
             {questions.map((q: any, qIdx: number) => {
-              const selectedOption = answers[q.id];
               return (
                 <div key={q.id} className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-start justify-between mb-4">
@@ -147,14 +137,14 @@ const QuizPage = () => {
 
                   <div className="space-y-2">
                     {(q.options || []).map((opt: any, oIdx: number) => {
-                      const isSelected = selectedOption === oIdx;
+                      const isSelected = answers[q.id] === String(opt.id);
                       const showCorrect = submitted && opt.isCorrect;
                       const showWrong = submitted && isSelected && !opt.isCorrect;
 
                       return (
                         <button
                           key={oIdx}
-                          onClick={() => handleSelect(q.id, oIdx)}
+                          onClick={() => handleSelect(String(q.id), String(opt.id))}
                           disabled={submitted}
                           className={cn(
                             "w-full text-left px-4 py-3 rounded-lg border text-sm transition-fast",
@@ -191,11 +181,13 @@ const QuizPage = () => {
 
           {submitted && (
             <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
-                Refazer
-              </Button>
+              {!passed && (
+                <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
+                  Tentar Novamente
+                </Button>
+              )}
               <Button onClick={() => navigate(`/learn/${slug}`)}>
-                Voltar ao Curso
+                {passed ? "✓ Continuar Curso" : "Voltar ao Curso"}
               </Button>
             </div>
           )}
