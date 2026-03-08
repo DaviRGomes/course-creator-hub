@@ -9,14 +9,14 @@ import { ArrowLeft, Award, Download } from "lucide-react";
 const CertificatePage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { email } = useAuth();
+  const { email, name } = useAuth();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
     queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
   });
 
-  const studentName = email?.split("@")[0] || "Aluno";
+  const studentName = name || email?.split("@")[0] || "Aluno";
   const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
   if (isLoading) {
