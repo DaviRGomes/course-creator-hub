@@ -42,10 +42,10 @@ const CourseOverviewPage = () => {
   return (
     <div>
       <button
-        onClick={() => navigate("/catalog")}
+        onClick={() => navigate("/dashboard")}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-fast mb-4"
       >
-        <ArrowLeft className="h-4 w-4" /> Catálogo
+        <ArrowLeft className="h-4 w-4" /> Menu Principal
       </button>
 
       {isLoading ? (
