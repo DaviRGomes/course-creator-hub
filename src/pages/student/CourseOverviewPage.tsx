@@ -61,7 +61,7 @@ const CourseOverviewPage = () => {
               <img
                 src={course.thumbnail}
                 alt={course.title}
-                className="w-full h-48 object-cover rounded-lg"
+                className="w-full aspect-video object-cover rounded-lg"
               />
             ) : (
               <div className="w-full h-48 bg-muted flex items-center justify-center">

@@ -91,10 +91,10 @@ const StudentDashboard = () => {
                 <img
                   src={c.thumbnail}
                   alt={c.title}
-                  className="w-full h-40 object-cover"
+                  className="w-full aspect-video object-cover"
                 />
               ) : (
-                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                <div className="w-full aspect-video bg-muted flex items-center justify-center">
                   <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
               )}
