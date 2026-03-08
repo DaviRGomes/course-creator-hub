@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const getEmbedUrl = (url: string): string | null => {
   if (!url) return null;
@@ -33,7 +33,14 @@ const formatDuration = (secs: number) => {
 const LessonPlayerPage = () => {
   const { slug, moduleId, lessonId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [completed, setCompleted] = useState(false);
+  const autoMarked = useRef(false);
+
+  useEffect(() => {
+    autoMarked.current = false;
+    setCompleted(false);
+  }, [lessonId]);
 
   const { data: course } = useQuery({
     queryKey: ["course-by-slug", slug],
@@ -61,12 +68,23 @@ const LessonPlayerPage = () => {
     onSuccess: () => {
       setCompleted(true);
       toast.success("Aula marcada como concluída!");
+      queryClient.invalidateQueries({ queryKey: ["module-sequence", courseId, Number(moduleId)] });
+      queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
     },
     onError: () => {
       setCompleted(true);
       toast.success("Aula marcada como concluída!");
     },
   });
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (completed || autoMarked.current || watchMut.isPending) return;
+    const video = e.currentTarget;
+    if (video.duration > 0 && video.currentTime / video.duration >= 0.8) {
+      autoMarked.current = true;
+      watchMut.mutate();
+    }
+  };
 
   const currentVideo = videos.find((v) => String(v.id) === lessonId);
   const currentIndex = videos.findIndex((v) => String(v.id) === lessonId);
@@ -108,7 +126,7 @@ const LessonPlayerPage = () => {
             const isDirectVideo = currentVideo.url?.match(/\.(mp4|webm|ogg)(\?|$)/);
             if (isDirectVideo) {
               return (
-                <video controls className="w-full aspect-video rounded-xl bg-black">
+                <video controls className="w-full aspect-video rounded-xl bg-black" onTimeUpdate={handleTimeUpdate}>
                   <source src={currentVideo.url} />
                 </video>
               );

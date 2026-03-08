@@ -5,7 +5,8 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BookOpen, PlayCircle, FileQuestion, Circle } from "lucide-react";
+import { ArrowLeft, BookOpen, PlayCircle, FileQuestion, Circle, CheckCircle2, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -124,8 +125,15 @@ const CourseOverviewPage = () => {
                       sequence.map((item: any) => (
                         <button
                           key={item.id}
-                          className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-accent/50 transition-fast"
+                          disabled={item.status === "LOCKED"}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-5 py-3 text-left transition-fast",
+                            item.status === "LOCKED"
+                              ? "opacity-40 cursor-not-allowed"
+                              : "hover:bg-accent/50"
+                          )}
                           onClick={() => {
+                            if (item.status === "LOCKED") return;
                             if (item.type === "VIDEO") {
                               navigate(`/learn/${slug}/modules/${mod.id}/lesson/${item.id}`);
                             } else {
@@ -133,7 +141,13 @@ const CourseOverviewPage = () => {
                             }
                           }}
                         >
-                          <Circle className="h-4 w-4 text-border shrink-0" />
+                          {item.status === "COMPLETED" ? (
+                            <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                          ) : item.status === "LOCKED" ? (
+                            <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-border shrink-0" />
+                          )}
                           {item.type === "VIDEO" ? (
                             <PlayCircle className="h-4 w-4 text-primary shrink-0" />
                           ) : (
