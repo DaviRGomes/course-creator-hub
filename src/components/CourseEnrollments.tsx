@@ -70,7 +70,7 @@ export const CourseEnrollments = ({ courseId }: Props) => {
     if (!searchEmail.trim()) return;
     setSearching(true);
     try {
-      const r = await api.get(`/users`, { params: { search: searchEmail } });
+      const r = await api.get(`/admin/users`, { params: { search: searchEmail } });
       const payload = r.data.data ?? r.data;
       const results = Array.isArray(payload) ? payload : (payload.content ?? []);
       const enrolledIds = new Set(enrollments.map((e) => e.userId));
