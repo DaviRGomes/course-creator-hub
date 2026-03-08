@@ -20,39 +20,8 @@ const DEFAULT_SETTINGS: CertificateSettings = {
   instructorName: "Instrutor",
   instructorTitle: "Instrutor do Curso",
   message: "Por ter concluído com êxito todas as aulas e atividades, demonstrando dedicação e comprometimento com o aprendizado.",
-  primaryColor: "#B8860B",
+  primaryColor: "#22c55e",
   logoUrl: "",
-};
-
-const OrnamentCorner = ({ gold, position }: { gold: string; position: string }) => {
-  const flip = {
-    "top-left": "",
-    "top-right": "scale(-1,1)",
-    "bottom-left": "scale(1,-1)",
-    "bottom-right": "scale(-1,-1)",
-  }[position];
-
-  const posStyle = {
-    "top-left": { top: 0, left: 0 },
-    "top-right": { top: 0, right: 0 },
-    "bottom-left": { bottom: 0, left: 0 },
-    "bottom-right": { bottom: 0, right: 0 },
-  }[position];
-
-  return (
-    <svg
-      width="80" height="80" viewBox="0 0 80 80"
-      className="absolute pointer-events-none"
-      style={posStyle}
-    >
-      <g transform={flip} style={{ transformOrigin: "40px 40px" }}>
-        <path d="M0,0 Q0,30 20,40 Q0,30 0,60" fill="none" stroke={gold} strokeWidth="1.5" opacity="0.6" />
-        <path d="M0,0 Q30,0 40,20 Q30,0 60,0" fill="none" stroke={gold} strokeWidth="1.5" opacity="0.6" />
-        <circle cx="12" cy="12" r="2" fill={gold} opacity="0.5" />
-        <path d="M5,5 L18,18" stroke={gold} strokeWidth="0.5" opacity="0.4" />
-      </g>
-    </svg>
-  );
 };
 
 const CertificatePage = () => {
@@ -69,7 +38,7 @@ const CertificatePage = () => {
     }
   })();
 
-  const gold = settings.primaryColor || "#B8860B";
+  const accent = settings.primaryColor || "#22c55e";
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
@@ -77,13 +46,16 @@ const CertificatePage = () => {
   });
 
   const studentName = name || email?.split("@")[0] || "Aluno";
+  const initial = studentName.charAt(0).toUpperCase();
   const today = new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "long", year: "numeric",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
   });
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-[500px] rounded-2xl" />
       </div>
@@ -114,7 +86,7 @@ const CertificatePage = () => {
         <Button
           onClick={() => window.print()}
           className="gap-2"
-          style={{ backgroundColor: gold, borderColor: gold }}
+          style={{ backgroundColor: accent, borderColor: accent, color: "#fff" }}
         >
           <Download className="h-4 w-4" />
           Baixar PDF
@@ -124,114 +96,151 @@ const CertificatePage = () => {
       {/* CERTIFICATE */}
       <div
         id="certificate"
-        className="relative max-w-3xl mx-auto bg-card overflow-hidden"
+        className="relative max-w-4xl mx-auto overflow-hidden"
         style={{
-          border: `2px solid ${gold}44`,
           borderRadius: "16px",
-          boxShadow: `0 0 60px ${gold}15, inset 0 0 60px ${gold}08`,
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
+          aspectRatio: "16/9",
         }}
       >
-        {/* Ornamental corners */}
-        <OrnamentCorner gold={gold} position="top-left" />
-        <OrnamentCorner gold={gold} position="top-right" />
-        <OrnamentCorner gold={gold} position="bottom-left" />
-        <OrnamentCorner gold={gold} position="bottom-right" />
+        {/* Accent gradient overlay on right side */}
+        <div
+          className="absolute top-0 right-0 w-1/3 h-full pointer-events-none"
+          style={{
+            background: `linear-gradient(180deg, ${accent}30 0%, ${accent}08 50%, transparent 100%)`,
+          }}
+        />
 
-        {/* Top decorative strip */}
-        <div className="text-center py-4" style={{ borderBottom: `1px solid ${gold}22` }}>
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="Logo" className="h-10 mx-auto object-contain" />
-          ) : (
-            <p className="text-xs font-semibold tracking-[0.3em] uppercase" style={{ color: gold }}>
-              ✦ {settings.platformName} ✦
-            </p>
-          )}
-        </div>
+        {/* Top accent bar */}
+        <div
+          className="absolute top-0 left-0 w-full h-1"
+          style={{ background: `linear-gradient(90deg, ${accent}, ${accent}00 70%)` }}
+        />
 
-        {/* Main body */}
-        <div className="px-8 md:px-16 py-10 md:py-14 text-center">
-          {/* Title */}
-          <h1
-            className="text-3xl md:text-4xl font-bold tracking-wide"
-            style={{
-              fontFamily: "'Georgia', 'Times New Roman', serif",
-              color: gold,
-            }}
-          >
-            Certificado de Conclusão
-          </h1>
+        {/* Left accent bar */}
+        <div
+          className="absolute top-0 left-0 w-1 h-full"
+          style={{ background: `linear-gradient(180deg, ${accent}, ${accent}00 60%)` }}
+        />
 
-          {/* Decorative line */}
-          <div className="flex items-center justify-center gap-3 my-6">
-            <div className="h-px w-16 md:w-24" style={{ backgroundColor: gold + "44" }} />
-            <svg width="20" height="20" viewBox="0 0 20 20">
-              <path d="M10,2 L12,8 L18,10 L12,12 L10,18 L8,12 L2,10 L8,8 Z" fill={gold} opacity="0.6" />
-            </svg>
-            <div className="h-px w-16 md:w-24" style={{ backgroundColor: gold + "44" }} />
-          </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between h-full p-8 md:p-12">
+          {/* Top section */}
+          <div>
+            {/* Title */}
+            <div className="mb-8">
+              <h1
+                className="text-3xl md:text-5xl font-bold tracking-wide uppercase"
+                style={{ color: accent, letterSpacing: "0.15em" }}
+              >
+                Certificado
+              </h1>
+              <p className="text-xl md:text-2xl font-light text-slate-300 tracking-wider uppercase mt-1">
+                de Conclusão
+              </p>
+            </div>
 
-          {/* Course title */}
-          <h2
-            className="text-xl md:text-2xl font-semibold text-foreground"
-            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-          >
-            {course.title}
-          </h2>
+            {/* Student info */}
+            <div className="flex items-center gap-4 mb-6">
+              {/* Avatar initial */}
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
+                style={{
+                  backgroundColor: "#334155",
+                  color: "#94a3b8",
+                  border: "2px solid #475569",
+                }}
+              >
+                {initial}
+              </div>
+              <div>
+                <p className="text-lg md:text-xl font-bold text-white uppercase tracking-wide">
+                  {studentName}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {settings.message}
+                </p>
+              </div>
+            </div>
 
-          {/* Thin line */}
-          <div className="h-px w-32 mx-auto my-6" style={{ backgroundColor: gold + "33" }} />
-
-          {/* Awarded to */}
-          <p className="text-sm text-muted-foreground mb-1">Conferido a</p>
-          <p
-            className="text-2xl md:text-3xl font-bold capitalize"
-            style={{
-              fontFamily: "'Georgia', 'Times New Roman', serif",
-              color: gold,
-            }}
-          >
-            {studentName}
-          </p>
-
-          {/* Message */}
-          <p className="text-sm text-muted-foreground max-w-lg mx-auto mt-6 leading-relaxed">
-            {settings.message}
-          </p>
-
-          {/* Footer */}
-          <div className="flex items-end justify-center gap-8 md:gap-16 mt-10 pt-6" style={{ borderTop: `1px solid ${gold}22` }}>
             {/* Date */}
-            <div className="text-center">
-              <p className="text-xs font-semibold text-foreground mb-1">Data</p>
-              <p className="text-xs text-muted-foreground">{today}</p>
-              <div className="h-px w-24 mt-2" style={{ backgroundColor: gold + "44" }} />
+            <p className="text-xs text-slate-500 mb-8">
+              Finalizado em {today}
+            </p>
+
+            {/* Platform label + Course title */}
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">
+                {settings.platformName}_
+              </p>
+              <h2 className="text-xl md:text-3xl font-extrabold text-white uppercase leading-tight">
+                {course.title}
+              </h2>
+            </div>
+          </div>
+
+          {/* Bottom section */}
+          <div className="flex items-end justify-between mt-auto pt-6">
+            {/* Logo / Platform name */}
+            <div>
+              {settings.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt="Logo"
+                  className="h-8 object-contain opacity-80"
+                />
+              ) : (
+                <p className="text-lg font-bold text-slate-500 tracking-wider lowercase">
+                  {settings.platformName}
+                </p>
+              )}
             </div>
 
-            {/* Central medal */}
-            <div className="flex flex-col items-center -mb-1">
-              <svg width="48" height="48" viewBox="0 0 48 48">
-                <circle cx="24" cy="24" r="20" fill="none" stroke={gold} strokeWidth="1.5" opacity="0.5" />
-                <circle cx="24" cy="24" r="15" fill="none" stroke={gold} strokeWidth="0.5" opacity="0.3" />
-                <circle cx="24" cy="24" r="10" fill={gold + "15"} stroke={gold} strokeWidth="0.5" opacity="0.4" />
-              </svg>
-              <p className="text-lg mt-1" style={{ color: gold }}>✦</p>
-            </div>
-
-            {/* Signature */}
-            <div className="text-center">
-              <p className="text-xs font-semibold text-foreground mb-1">Instrutor</p>
-              <p className="text-xs text-muted-foreground">{settings.instructorName}</p>
-              <div className="h-px w-24 mt-2" style={{ backgroundColor: gold + "44" }} />
-              <p className="text-[10px] text-muted-foreground mt-1">{settings.instructorTitle}</p>
+            {/* Signatures */}
+            <div className="flex items-end gap-8">
+              <div className="text-center">
+                {/* Signature line SVG */}
+                <svg width="80" height="24" viewBox="0 0 80 24" className="mx-auto mb-1">
+                  <path
+                    d="M5,18 C15,4 25,20 35,10 C45,0 55,16 65,8 C70,5 75,12 78,10"
+                    fill="none"
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="h-px w-20 bg-slate-600 mb-1" />
+                <p className="text-xs font-semibold text-slate-300">{settings.instructorName}</p>
+                <p className="text-[10px] text-slate-500 italic">{settings.instructorTitle}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom decorative strip */}
-        <div className="text-center py-3" style={{ borderTop: `1px solid ${gold}22` }}>
-          <p className="text-xs tracking-[0.5em]" style={{ color: gold + "66" }}>
-            ✦ ✦ ✦
-          </p>
+        {/* Decorative circle stamp (top right) */}
+        <div
+          className="absolute top-6 right-6 md:top-10 md:right-10 pointer-events-none"
+          style={{ opacity: 0.08 }}
+        >
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="55" fill="none" stroke="white" strokeWidth="2" />
+            <circle cx="60" cy="60" r="45" fill="none" stroke="white" strokeWidth="1" />
+            <text
+              x="60"
+              y="55"
+              textAnchor="middle"
+              fill="white"
+              fontSize="10"
+              fontWeight="bold"
+              letterSpacing="2"
+            >
+              CERTIFICADO
+            </text>
+            <text x="60" y="70" textAnchor="middle" fill="white" fontSize="8" letterSpacing="1">
+              APROVADO
+            </text>
+          </svg>
         </div>
       </div>
 

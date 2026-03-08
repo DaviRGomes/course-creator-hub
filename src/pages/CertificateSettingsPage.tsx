@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: CertificateSettings = {
   instructorName: "Instrutor",
   instructorTitle: "Instrutor do Curso",
   message: "Por ter concluído com êxito todas as aulas e atividades, demonstrando dedicação e comprometimento com o aprendizado.",
-  primaryColor: "#B8860B",
+  primaryColor: "#22c55e",
   logoUrl: "",
 };
 
