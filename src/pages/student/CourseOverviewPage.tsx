@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -13,17 +14,33 @@ const formatDuration = (secs: number) => {
 };
 
 const CourseOverviewPage = () => {
-  const { courseId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
 
   const { data: course, isLoading: loadingCourse } = useQuery({
-    queryKey: ["student-course", courseId],
-    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+    queryKey: ["student-course", slug],
+    queryFn: () => api.get(`/courses/slug/${slug}`).then((r) => r.data.data ?? r.data),
+    enabled: !!slug,
   });
+
+  const courseId = course?.id;
+
+  const { data: enrolled, isLoading: loadingEnrolled } = useQuery({
+    queryKey: ["student-enrolled", courseId],
+    queryFn: () => api.get(`/student/enrolled/${courseId}`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
+  });
+
+  useEffect(() => {
+    if (!loadingEnrolled && enrolled === false) {
+      navigate("/catalog", { replace: true });
+    }
+  }, [enrolled, loadingEnrolled, navigate]);
 
   const { data: modules = [], isLoading: loadingModules } = useQuery({
     queryKey: ["student-modules", courseId],
     queryFn: () => api.get(`/courses/${courseId}/modules`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId && enrolled === true,
   });
 
   const sequenceQueries = useQueries({
@@ -37,7 +54,7 @@ const CourseOverviewPage = () => {
     })),
   });
 
-  const isLoading = loadingCourse || loadingModules;
+  const isLoading = loadingCourse || loadingEnrolled || loadingModules;
 
   return (
     <div>
@@ -110,9 +127,9 @@ const CourseOverviewPage = () => {
                           className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-accent/50 transition-fast"
                           onClick={() => {
                             if (item.type === "VIDEO") {
-                              navigate(`/learn/${courseId}/modules/${mod.id}/lesson/${item.id}`);
+                              navigate(`/learn/${slug}/modules/${mod.id}/lesson/${item.id}`);
                             } else {
-                              navigate(`/learn/${courseId}/modules/${mod.id}/quiz/${item.id}`);
+                              navigate(`/learn/${slug}/modules/${mod.id}/quiz/${item.id}`);
                             }
                           }}
                         >

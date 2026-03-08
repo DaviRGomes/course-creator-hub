@@ -31,23 +31,28 @@ const formatDuration = (secs: number) => {
 };
 
 const LessonPlayerPage = () => {
-  const { courseId, moduleId, lessonId } = useParams();
+  const { slug, moduleId, lessonId } = useParams();
   const navigate = useNavigate();
   const [completed, setCompleted] = useState(false);
 
   const { data: course } = useQuery({
-    queryKey: ["course", courseId],
-    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+    queryKey: ["course-by-slug", slug],
+    queryFn: () => api.get(`/courses/slug/${slug}`).then((r) => r.data.data ?? r.data),
+    enabled: !!slug,
   });
+
+  const courseId = course?.id;
 
   const { data: moduleData } = useQuery({
     queryKey: ["module", moduleId],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
   });
 
   const { data: videos = [], isLoading: loadingVideos } = useQuery<any[]>({
     queryKey: ["videos", moduleId],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/videos`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
   });
 
   const watchMut = useMutation({
@@ -68,7 +73,7 @@ const LessonPlayerPage = () => {
   const prevVideo = currentIndex > 0 ? videos[currentIndex - 1] : null;
   const nextVideo = currentIndex < videos.length - 1 ? videos[currentIndex + 1] : null;
 
-  if (loadingVideos) {
+  if (loadingVideos || !courseId) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -82,7 +87,7 @@ const LessonPlayerPage = () => {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">Aula não encontrada.</p>
-        <Button className="mt-4" onClick={() => navigate(`/learn/${courseId}`)}>Voltar ao curso</Button>
+        <Button className="mt-4" onClick={() => navigate(`/learn/${slug}`)}>Voltar ao curso</Button>
       </div>
     );
   }
@@ -90,7 +95,7 @@ const LessonPlayerPage = () => {
   return (
     <div>
       <button
-        onClick={() => navigate(`/learn/${courseId}`)}
+        onClick={() => navigate(`/learn/${slug}`)}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-fast mb-4"
       >
         <ArrowLeft className="h-4 w-4" /> {course?.title} — {moduleData?.title}
@@ -143,12 +148,12 @@ const LessonPlayerPage = () => {
 
           <div className="flex items-center justify-between pt-4 border-t border-border">
             {prevVideo ? (
-              <Button variant="ghost" onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${prevVideo.id}`)}>
+              <Button variant="ghost" onClick={() => navigate(`/learn/${slug}/modules/${moduleId}/lesson/${prevVideo.id}`)}>
                 <ArrowLeft className="h-4 w-4" /> {prevVideo.title}
               </Button>
             ) : <div />}
             {nextVideo ? (
-              <Button variant="ghost" onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${nextVideo.id}`)}>
+              <Button variant="ghost" onClick={() => navigate(`/learn/${slug}/modules/${moduleId}/lesson/${nextVideo.id}`)}>
                 {nextVideo.title} <ArrowRight className="h-4 w-4" />
               </Button>
             ) : <div />}
@@ -163,7 +168,7 @@ const LessonPlayerPage = () => {
             {videos.map((v, i) => (
               <button
                 key={v.id}
-                onClick={() => navigate(`/learn/${courseId}/modules/${moduleId}/lesson/${v.id}`)}
+                onClick={() => navigate(`/learn/${slug}/modules/${moduleId}/lesson/${v.id}`)}
                 className={cn(
                   "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast hover:bg-accent/50",
                   String(v.id) === lessonId && "bg-primary/5 border-l-2 border-l-primary"

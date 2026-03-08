@@ -38,9 +38,9 @@ const App = () => (
               <Route path="dashboard" element={<StudentDashboard />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="certificate/:courseId" element={<CertificatePage />} />
-              <Route path="learn/:courseId" element={<CourseOverviewPage />} />
-              <Route path="learn/:courseId/modules/:moduleId/lesson/:lessonId" element={<LessonPlayerPage />} />
-              <Route path="learn/:courseId/modules/:moduleId/quiz/:quizId" element={<QuizPage />} />
+              <Route path="learn/:slug" element={<CourseOverviewPage />} />
+              <Route path="learn/:slug/modules/:moduleId/lesson/:lessonId" element={<LessonPlayerPage />} />
+              <Route path="learn/:slug/modules/:moduleId/quiz/:quizId" element={<QuizPage />} />
             </Route>
 
             {/* Admin routes */}

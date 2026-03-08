@@ -12,6 +12,7 @@ interface EnrolledCourse {
   title: string;
   description: string;
   thumbnail: string;
+  slug: string;
   progress: number;
 }
 
@@ -85,7 +86,7 @@ const StudentDashboard = () => {
             <div
               key={c.id}
               className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md"
-              onClick={() => navigate(`/learn/${c.id}`)}
+              onClick={() => navigate(`/learn/${c.slug || c.id}`)}
             >
               {c.thumbnail ? (
                 <img

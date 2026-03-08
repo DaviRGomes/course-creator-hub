@@ -9,20 +9,24 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const QuizPage = () => {
-  const { courseId, moduleId, quizId } = useParams();
+  const { slug, moduleId, quizId } = useParams();
   const navigate = useNavigate();
 
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<any>(null);
 
   const { data: course } = useQuery({
-    queryKey: ["course", courseId],
-    queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
+    queryKey: ["course-by-slug", slug],
+    queryFn: () => api.get(`/courses/slug/${slug}`).then((r) => r.data.data ?? r.data),
+    enabled: !!slug,
   });
+
+  const courseId = course?.id;
 
   const { data: moduleData } = useQuery({
     queryKey: ["module", moduleId],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
   });
 
   const { data: activity, isLoading } = useQuery({
@@ -30,6 +34,7 @@ const QuizPage = () => {
     queryFn: () =>
       api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}`)
         .then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
   });
 
   const submitMut = useMutation({
@@ -61,7 +66,7 @@ const QuizPage = () => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !courseId) {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -75,7 +80,7 @@ const QuizPage = () => {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">Atividade não encontrada.</p>
-        <Button className="mt-4" onClick={() => navigate(`/learn/${courseId}`)}>Voltar ao curso</Button>
+        <Button className="mt-4" onClick={() => navigate(`/learn/${slug}`)}>Voltar ao curso</Button>
       </div>
     );
   }
@@ -93,7 +98,7 @@ const QuizPage = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <button
-        onClick={() => navigate(`/learn/${courseId}`)}
+        onClick={() => navigate(`/learn/${slug}`)}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-fast mb-4"
       >
         <ArrowLeft className="h-4 w-4" /> {course?.title} — {moduleData?.title}
@@ -189,7 +194,7 @@ const QuizPage = () => {
               <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
                 Refazer
               </Button>
-              <Button onClick={() => navigate(`/learn/${courseId}`)}>
+              <Button onClick={() => navigate(`/learn/${slug}`)}>
                 Voltar ao Curso
               </Button>
             </div>

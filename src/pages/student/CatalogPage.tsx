@@ -50,7 +50,7 @@ const CatalogPage = () => {
                     <Clock className="h-3 w-3" />
                     {c.modulesCount ?? 0} módulos
                   </span>
-                  <Button size="sm" onClick={() => navigate(`/learn/${c.id}`)}>
+                  <Button size="sm" onClick={() => navigate(`/learn/${c.slug || c.id}`)}>
                     Acessar
                   </Button>
                 </div>
