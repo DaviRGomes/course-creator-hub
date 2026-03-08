@@ -36,6 +36,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="profile" element={<ProfilePage />} />
               <Route path="certificate/:courseId" element={<CertificatePage />} />
               <Route path="learn/:courseId" element={<CourseOverviewPage />} />
               <Route path="learn/:courseId/modules/:moduleId/lesson/:lessonId" element={<LessonPlayerPage />} />

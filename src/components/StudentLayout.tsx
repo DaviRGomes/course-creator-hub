@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/dashboard", label: "Meu Painel", icon: LayoutDashboard },
+  { to: "/profile", label: "Meu Perfil", icon: User },
 ];
 
 const StudentLayout = () => {
