@@ -62,6 +62,16 @@ const LessonPlayerPage = () => {
     enabled: !!courseId,
   });
 
+  const { data: sequence = [] } = useQuery<any[]>({
+    queryKey: ["module-sequence", courseId, Number(moduleId)],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
+  });
+
+  const completedIds = new Set(
+    sequence.filter((s: any) => s.status === "COMPLETED").map((s: any) => String(s.id))
+  );
+
   const watchMut = useMutation({
     mutationFn: () =>
       api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
@@ -192,7 +202,11 @@ const LessonPlayerPage = () => {
                   String(v.id) === lessonId && "bg-primary/5 border-l-2 border-l-primary"
                 )}
               >
-                <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
+                {(completedIds.has(String(v.id)) || (String(v.id) === lessonId && completed)) ? (
+                  <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                ) : (
+                  <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-sm truncate", String(v.id) === lessonId ? "text-primary font-medium" : "text-foreground")}>
                     {v.title}
