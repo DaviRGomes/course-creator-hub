@@ -98,13 +98,32 @@ const LessonPlayerPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
-            <div className="text-center">
-              <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Player de vídeo</p>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">{currentVideo.url}</p>
-            </div>
-          </div>
+          {(() => {
+            const embedUrl = getEmbedUrl(currentVideo.url);
+            const isDirectVideo = currentVideo.url?.match(/\.(mp4|webm|ogg)(\?|$)/);
+            if (isDirectVideo) {
+              return (
+                <video controls className="w-full aspect-video rounded-xl bg-black">
+                  <source src={currentVideo.url} />
+                </video>
+              );
+            }
+            return embedUrl ? (
+              <iframe
+                src={embedUrl}
+                className="w-full aspect-video rounded-xl border border-border"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+              />
+            ) : (
+              <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
+                <div className="text-center">
+                  <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Vídeo não disponível</p>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex items-start justify-between">
             <div>
