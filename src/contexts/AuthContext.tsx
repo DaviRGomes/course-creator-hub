@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return {
       token,
       email: localStorage.getItem("auth_email"),
+      name: localStorage.getItem("admin_name"),
       role: localStorage.getItem("auth_role"),
       isAuthenticated: !!token,
     };
