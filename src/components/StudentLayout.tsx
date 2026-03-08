@@ -31,7 +31,7 @@ const StudentLayout = () => {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <GraduationCap className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-sm text-foreground hidden sm:block">Plataforma de Cursos</span>
+              <span className="font-semibold text-sm text-foreground hidden sm:block">Conexões Sociais</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-1">
