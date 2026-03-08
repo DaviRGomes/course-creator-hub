@@ -202,7 +202,11 @@ const LessonPlayerPage = () => {
                   String(v.id) === lessonId && "bg-primary/5 border-l-2 border-l-primary"
                 )}
               >
-                <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
+                {(completedIds.has(String(v.id)) || (String(v.id) === lessonId && completed)) ? (
+                  <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                ) : (
+                  <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-sm truncate", String(v.id) === lessonId ? "text-primary font-medium" : "text-foreground")}>
                     {v.title}
