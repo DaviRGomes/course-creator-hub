@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, Layers, Loader2, Save, BookOpen } from "lucide-react";
+import { CourseEnrollments } from "@/components/CourseEnrollments";
 
 interface Module {
   id: string;
