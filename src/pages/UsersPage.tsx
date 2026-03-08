@@ -20,6 +20,8 @@ interface User {
   email: string;
   role: string;
   active: boolean;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: string;
 }
 
 const UsersPage = () => {
