@@ -19,8 +19,8 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/users", { replace: true });
+      const role = await login(email, password);
+      navigate(role === "ADMIN" ? "/admin/users" : "/dashboard", { replace: true });
     } catch (err: any) {
       toast.error(err.message || "Erro ao fazer login");
     } finally {
