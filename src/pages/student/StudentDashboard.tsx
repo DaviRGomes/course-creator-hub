@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
-import { Button } from "@/components/ui/button";
+
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, PlayCircle, Trophy, TrendingUp } from "lucide-react";
