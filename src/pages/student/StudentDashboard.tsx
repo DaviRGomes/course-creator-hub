@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
-import { Button } from "@/components/ui/button";
+
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, PlayCircle, Trophy, TrendingUp } from "lucide-react";
@@ -77,30 +77,42 @@ const StudentDashboard = () => {
       ) : courses.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center">
           <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground mb-4">Você ainda não está matriculado em nenhum curso.</p>
-          <Button onClick={() => navigate("/catalog")}>Ver Catálogo</Button>
+          <p className="text-muted-foreground">Você ainda não está matriculado em nenhum curso.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.map((c) => (
             <div
               key={c.id}
-              className="bg-card border border-border rounded-xl p-5 cursor-pointer transition-fast hover:shadow-md"
+              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md"
               onClick={() => navigate(`/learn/${c.id}`)}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{c.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{c.description}</p>
+              {c.thumbnail ? (
+                <img
+                  src={c.thumbnail}
+                  alt={c.title}
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
-                <PlayCircle className="h-5 w-5 text-primary shrink-0 ml-3" />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium text-foreground">{c.progress}%</span>
+              )}
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{c.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{c.description}</p>
+                  </div>
+                  <PlayCircle className="h-5 w-5 text-primary shrink-0 ml-3" />
                 </div>
-                <Progress value={c.progress} className="h-2" />
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progresso</span>
+                    <span className="font-medium text-foreground">{c.progress}%</span>
+                  </div>
+                  <Progress value={c.progress} className="h-2" />
+                </div>
               </div>
             </div>
           ))}
