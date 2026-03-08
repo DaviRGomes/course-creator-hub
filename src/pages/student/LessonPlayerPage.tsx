@@ -42,6 +42,18 @@ const LessonPlayerPage = () => {
     setCompleted(false);
   }, [lessonId]);
 
+  // Auto-mark as completed after 30s for iframe videos (YouTube/Drive)
+  useEffect(() => {
+    if (completed || autoMarked.current) return;
+    const timer = setTimeout(() => {
+      if (!completed && !autoMarked.current && !watchMut.isPending) {
+        autoMarked.current = true;
+        watchMut.mutate();
+      }
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [lessonId, completed]);
+
   const { data: course } = useQuery({
     queryKey: ["course-by-slug", slug],
     queryFn: () => api.get(`/courses/slug/${slug}`).then((r) => r.data.data ?? r.data),
