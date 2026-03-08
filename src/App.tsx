@@ -51,6 +51,7 @@ const App = () => (
               <Route path="courses" element={<CoursesPage />} />
               <Route path="courses/:id" element={<CourseDetailPage />} />
               <Route path="courses/:id/modules/:moduleId" element={<ModuleDetailPage />} />
+              <Route path="certificate-settings" element={<CertificateSettingsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
