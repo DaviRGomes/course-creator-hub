@@ -28,7 +28,7 @@ const AdminLayout = () => {
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
           <GraduationCap className="h-4 w-4 text-primary-foreground" />
         </div>
-        <span className="font-semibold text-sm" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>Plataforma Admin</span>
+        <span className="font-semibold text-sm" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>Conexões Sociais</span>
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
