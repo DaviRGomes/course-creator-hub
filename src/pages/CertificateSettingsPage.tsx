@@ -16,7 +16,7 @@ interface CertificateSettings {
 }
 
 const DEFAULT_SETTINGS: CertificateSettings = {
-  platformName: "Plataforma de Cursos",
+  platformName: "Conexões Sociais",
   instructorName: "Instrutor",
   instructorTitle: "Instrutor do Curso",
   message: "Por ter concluído com êxito todas as aulas e atividades, demonstrando dedicação e comprometimento com o aprendizado.",
