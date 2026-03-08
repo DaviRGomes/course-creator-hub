@@ -56,13 +56,21 @@ const CourseOverviewPage = () => {
         </div>
       ) : (
         <>
-          <div className="bg-card border border-border rounded-xl p-6 mb-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">{course?.title}</h1>
-                <p className="text-sm text-muted-foreground mt-1">{course?.description}</p>
+          <div className="bg-card border border-border rounded-xl overflow-hidden mb-6">
+            {course?.thumbnail ? (
+              <img
+                src={course.thumbnail}
+                alt={course.title}
+                className="w-full h-48 object-cover"
+              />
+            ) : (
+              <div className="w-full h-48 bg-muted flex items-center justify-center">
+                <BookOpen className="h-12 w-12 text-muted-foreground" />
               </div>
-              <BookOpen className="h-8 w-8 text-primary/30 shrink-0" />
+            )}
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-foreground">{course?.title}</h1>
+              <p className="text-sm text-muted-foreground mt-1">{course?.description}</p>
             </div>
           </div>
 
