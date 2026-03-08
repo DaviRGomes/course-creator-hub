@@ -80,21 +80,21 @@ const StudentDashboard = () => {
           <p className="text-muted-foreground">Você ainda não está matriculado em nenhum curso.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map((c) => (
             <div
               key={c.id}
-              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md"
+              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md max-w-sm"
               onClick={() => navigate(`/learn/${c.id}`)}
             >
               {c.thumbnail ? (
                 <img
                   src={c.thumbnail}
                   alt={c.title}
-                  className="w-full h-40 object-cover"
+                  className="w-full h-36 object-cover"
                 />
               ) : (
-                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                <div className="w-full h-36 bg-muted flex items-center justify-center">
                   <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
               )}
