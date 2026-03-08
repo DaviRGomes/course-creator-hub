@@ -84,17 +84,17 @@ const StudentDashboard = () => {
           {courses.map((c) => (
             <div
               key={c.id}
-              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md max-w-sm"
+              className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-fast hover:shadow-md"
               onClick={() => navigate(`/learn/${c.id}`)}
             >
               {c.thumbnail ? (
                 <img
                   src={c.thumbnail}
                   alt={c.title}
-                  className="w-full h-36 object-cover"
+                  className="w-full h-40 object-cover"
                 />
               ) : (
-                <div className="w-full h-36 bg-muted flex items-center justify-center">
+                <div className="w-full h-40 bg-muted flex items-center justify-center">
                   <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
               )}

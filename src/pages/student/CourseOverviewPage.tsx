@@ -56,12 +56,12 @@ const CourseOverviewPage = () => {
         </div>
       ) : (
         <>
-          <div className="bg-card border border-border rounded-xl overflow-hidden mb-6">
+          <div className="max-w-3xl mx-auto mb-6">
             {course?.thumbnail ? (
               <img
                 src={course.thumbnail}
                 alt={course.title}
-                className="w-full h-48 object-cover"
+                className="w-full h-48 object-cover rounded-lg"
               />
             ) : (
               <div className="w-full h-48 bg-muted flex items-center justify-center">
