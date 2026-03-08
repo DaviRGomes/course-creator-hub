@@ -4,6 +4,7 @@ import api from "@/lib/api";
 interface AuthState {
   token: string | null;
   email: string | null;
+  name: string | null;
   role: string | null;
   isAuthenticated: boolean;
 }
