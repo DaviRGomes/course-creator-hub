@@ -1,8 +1,9 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, BookOpen, LayoutDashboard, LogOut, Menu, X, User } from "lucide-react";
+import { GraduationCap, BookOpen, LayoutDashboard, LogOut, Menu, X, User, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { to: "/dashboard", label: "Meu Painel", icon: LayoutDashboard },
