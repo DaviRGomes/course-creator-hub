@@ -20,6 +20,8 @@ interface User {
   email: string;
   role: string;
   active: boolean;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: string;
 }
 
 const UsersPage = () => {
@@ -71,30 +73,50 @@ const UsersPage = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Plano</TableHead>
+                <TableHead>Expiração</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell><Badge variant="secondary">{u.role}</Badge></TableCell>
-                  <TableCell>
-                    <button onClick={() => toggleMut.mutate(u.id)} className="transition-fast">
-                      <Badge variant={u.active ? "default" : "outline"} className={u.active ? "bg-success hover:bg-success/80 text-success-foreground" : ""}>
-                        {u.active ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {users.map((u) => {
+                const isExpired = u.subscriptionExpiresAt
+                  ? new Date(u.subscriptionExpiresAt) < new Date()
+                  : false;
+                return (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">{u.name}</TableCell>
+                    <TableCell>{u.email}</TableCell>
+                    <TableCell><Badge variant="secondary">{u.role}</Badge></TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{u.subscriptionPlan || "—"}</span>
+                    </TableCell>
+                    <TableCell>
+                      {u.subscriptionExpiresAt ? (
+                        <span className={`text-sm font-medium ${isExpired ? "text-destructive" : "text-foreground"}`}>
+                          {new Date(u.subscriptionExpiresAt).toLocaleDateString("pt-BR")}
+                          {isExpired && <Badge variant="outline" className="ml-2 text-destructive border-destructive text-xs">Expirado</Badge>}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <button onClick={() => toggleMut.mutate(u.id)} className="transition-fast">
+                        <Badge variant={u.active ? "default" : "outline"} className={u.active ? "bg-success hover:bg-success/80 text-success-foreground" : ""}>
+                          {u.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
