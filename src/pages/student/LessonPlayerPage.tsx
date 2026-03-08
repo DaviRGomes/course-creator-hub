@@ -62,6 +62,16 @@ const LessonPlayerPage = () => {
     enabled: !!courseId,
   });
 
+  const { data: sequence = [] } = useQuery<any[]>({
+    queryKey: ["module-sequence", courseId, Number(moduleId)],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
+  });
+
+  const completedIds = new Set(
+    sequence.filter((s: any) => s.status === "COMPLETED").map((s: any) => String(s.id))
+  );
+
   const watchMut = useMutation({
     mutationFn: () =>
       api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
