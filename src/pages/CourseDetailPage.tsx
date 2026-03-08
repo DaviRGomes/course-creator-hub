@@ -261,6 +261,10 @@ const CourseDetailPage = () => {
         </DialogContent>
       </Dialog>
 
+      <Separator className="my-6" />
+
+      {id && <CourseEnrollments courseId={id} />}
+
       <ConfirmDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)} loading={deleteMut.isPending} />
       <ConfirmDialog open={deleteCourseOpen} onOpenChange={() => setDeleteCourseOpen(false)} onConfirm={() => deleteCourseMut.mutate()} loading={deleteCourseMut.isPending} />
     </div>
