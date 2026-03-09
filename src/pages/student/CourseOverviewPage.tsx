@@ -55,6 +55,17 @@ const CourseOverviewPage = () => {
     })),
   });
 
+  const materialQueries = useQueries({
+    queries: modules.map((mod: any) => ({
+      queryKey: ["materials", String(mod.id)],
+      queryFn: () =>
+        api.get(`/courses/${courseId}/modules/${mod.id}/materials`)
+          .then((r) => r.data.data ?? r.data)
+          .catch(() => []),
+      enabled: modules.length > 0,
+    })),
+  });
+
   const isLoading = loadingCourse || loadingEnrolled || loadingModules;
 
   return (
