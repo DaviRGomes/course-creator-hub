@@ -55,6 +55,17 @@ const CourseOverviewPage = () => {
     })),
   });
 
+  const materialQueries = useQueries({
+    queries: modules.map((mod: any) => ({
+      queryKey: ["materials", String(mod.id)],
+      queryFn: () =>
+        api.get(`/courses/${courseId}/modules/${mod.id}/materials`)
+          .then((r) => r.data.data ?? r.data)
+          .catch(() => []),
+      enabled: modules.length > 0,
+    })),
+  });
+
   const isLoading = loadingCourse || loadingEnrolled || loadingModules;
 
   return (
@@ -161,6 +172,35 @@ const CourseOverviewPage = () => {
                       ))
                     )}
                   </div>
+
+                  {(() => {
+                    const modMaterials: any[] = (materialQueries[idx]?.data as any[]) ?? [];
+                    if (modMaterials.length === 0) return null;
+                    return (
+                      <div className="border-t border-border px-5 py-3">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                          📁 Materiais de Apoio
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {modMaterials.map((m: any) => (
+                            <a
+                              key={m.id}
+                              href={m.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
+                            >
+                              {m.type === "PDF" && "📄"}
+                              {m.type === "IMAGE" && "🖼️"}
+                              {m.type === "LINK" && "🔗"}
+                              {m.type === "VIDEO_EXTRA" && "🎬"}
+                              {m.title}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
