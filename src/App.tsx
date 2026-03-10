@@ -19,6 +19,7 @@ import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
 import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
+import DashboardPage from "@/pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
