@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
-  { to: "/admin/users", label: "Usuários", icon: Users },
-  { to: "/admin/courses", label: "Cursos", icon: BookOpen },
+  { to: "/admin/dashboard", label: "Monitoramento", icon: LayoutDashboard },
+  { to: "/admin/users",     label: "Usuários",       icon: Users },
+  { to: "/admin/courses",   label: "Cursos",         icon: BookOpen },
   { to: "/admin/certificate-settings", label: "Certificado", icon: Award },
 ];
 
