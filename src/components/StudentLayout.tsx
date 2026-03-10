@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, BookOpen, LayoutDashboard, LogOut, Menu, X, User, Moon, Sun } from "lucide-react";
+import { BookOpen, LayoutDashboard, LogOut, Menu, X, User, Moon, Sun } from "lucide-react";
+import LogoIcon from "@/components/LogoIcon";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
@@ -28,9 +29,7 @@ const StudentLayout = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <LogoIcon className="w-8 h-8 rounded-lg" />
               <span className="font-semibold text-sm text-foreground hidden sm:block">Conexões Sociais</span>
             </div>
 

@@ -1,14 +1,26 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, BookOpen, GraduationCap, LogOut, Menu, X, Moon, Sun, LayoutDashboard, Award } from "lucide-react";
+import {
+  Users,
+  BookOpen,
+  GraduationCap,
+  LogOut,
+  Menu,
+  X,
+  Moon,
+  Sun,
+  LayoutDashboard,
+  Award,
+} from "lucide-react";
+import LogoIcon from "@/components/LogoIcon";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { to: "/admin/dashboard", label: "Monitoramento", icon: LayoutDashboard },
-  { to: "/admin/users",     label: "Usuários",       icon: Users },
-  { to: "/admin/courses",   label: "Cursos",         icon: BookOpen },
+  { to: "/admin/users", label: "Usuários", icon: Users },
+  { to: "/admin/courses", label: "Cursos", icon: BookOpen },
   { to: "/admin/certificate-settings", label: "Certificado", icon: Award },
 ];
 
@@ -24,12 +36,21 @@ const AdminLayout = () => {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full" style={{ backgroundColor: "hsl(var(--sidebar-background))" }}>
-      <div className="p-5 flex items-center gap-3 border-b" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <GraduationCap className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <span className="font-semibold text-sm" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>Conexões Sociais</span>
+    <div
+      className="flex flex-col h-full"
+      style={{ backgroundColor: "hsl(var(--sidebar-background))" }}
+    >
+      <div
+        className="p-5 flex items-center gap-3 border-b"
+        style={{ borderColor: "hsl(var(--sidebar-border))" }}
+      >
+        <LogoIcon className="w-8 h-8 rounded-lg" />
+        <span
+          className="font-semibold text-sm"
+          style={{ color: "hsl(var(--sidebar-accent-foreground))" }}
+        >
+          Conexões Sociais
+        </span>
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
@@ -43,11 +64,13 @@ const AdminLayout = () => {
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-fast",
                 isActive
                   ? "bg-primary/15 text-primary font-medium"
-                  : "hover:bg-[hsl(var(--sidebar-accent))]"
+                  : "hover:bg-[hsl(var(--sidebar-accent))]",
               )
             }
             style={({ isActive }) => ({
-              color: isActive ? "hsl(var(--sidebar-primary))" : "hsl(var(--sidebar-foreground))",
+              color: isActive
+                ? "hsl(var(--sidebar-primary))"
+                : "hsl(var(--sidebar-foreground))",
             })}
           >
             <item.icon className="h-4 w-4" />
@@ -56,8 +79,16 @@ const AdminLayout = () => {
         ))}
       </nav>
 
-      <div className="p-3 border-t" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
-        <div className="px-3 py-1.5 mb-2 text-xs truncate" style={{ color: "hsl(var(--sidebar-foreground))" }}>{email}</div>
+      <div
+        className="p-3 border-t"
+        style={{ borderColor: "hsl(var(--sidebar-border))" }}
+      >
+        <div
+          className="px-3 py-1.5 mb-2 text-xs truncate"
+          style={{ color: "hsl(var(--sidebar-foreground))" }}
+        >
+          {email}
+        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm w-full hover:bg-[hsl(var(--sidebar-accent))] transition-fast"
@@ -79,7 +110,10 @@ const AdminLayout = () => {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-foreground/20" onClick={() => setMobileOpen(false)} />
+          <div
+            className="absolute inset-0 bg-foreground/20"
+            onClick={() => setMobileOpen(false)}
+          />
           <aside className="relative w-60 h-full z-50">
             <SidebarContent />
           </aside>
@@ -89,7 +123,10 @@ const AdminLayout = () => {
       {/* Main */}
       <main className="flex-1 md:ml-60 min-h-screen">
         <header className="sticky top-0 z-20 bg-card border-b border-border h-14 flex items-center px-4 md:px-6">
-          <button className="md:hidden mr-3 text-foreground" onClick={() => setMobileOpen(true)}>
+          <button
+            className="md:hidden mr-3 text-foreground"
+            onClick={() => setMobileOpen(true)}
+          >
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
@@ -98,7 +135,11 @@ const AdminLayout = () => {
             className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-fast"
             title={theme === "light" ? "Modo escuro" : "Modo claro"}
           >
-            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            {theme === "light" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
           </button>
         </header>
         <div className="p-4 md:p-6">
