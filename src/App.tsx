@@ -19,6 +19,7 @@ import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
 import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
+import DashboardPage from "@/pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,7 +47,8 @@ const App = () => (
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/admin/users" replace />} />
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="courses" element={<CoursesPage />} />
               <Route path="courses/:id" element={<CourseDetailPage />} />
