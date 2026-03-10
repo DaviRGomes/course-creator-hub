@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, BookOpen, GraduationCap, LogOut, Menu, X, Moon, Sun, Award } from "lucide-react";
+import { Users, BookOpen, GraduationCap, LogOut, Menu, X, Moon, Sun, LayoutDashboard, Award } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
