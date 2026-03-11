@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, Upload } from "lucide-react";
 
 interface VideoItem { id: string; title: string; url: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
