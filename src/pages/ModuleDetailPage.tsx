@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, Upload } from "lucide-react";
 
-interface VideoItem { id: string; title: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
+interface VideoItem { id: string; title: string; muxAssetId?: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
 interface Question { id?: string; questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; }
 interface Activity { id: string; title: string; description: string; sequenceOrder: number; passingScore: number; questions?: Question[]; }
@@ -38,7 +38,7 @@ const ModuleDetailPage = () => {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string } | null>(null);
 
-  const [videoForm, setVideoForm] = useState({ title: "", duration: 0, sequenceOrder: 0 });
+  const [videoForm, setVideoForm] = useState({ title: "", duration: 0, sequenceOrder: 0, muxAssetId: "" });
   const [actForm, setActForm] = useState({ title: "", description: "", sequenceOrder: 0, passingScore: 70 });
   const [qForm, setQForm] = useState<{ questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; correctAnswer: string }>({
     questionText: "", questionType: "MULTIPLE_CHOICE", orderIndex: 0, points: 10, options: [
@@ -151,8 +151,8 @@ const ModuleDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao salvar material"),
   });
 
-  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", duration: 0, sequenceOrder: sequence.length }); setVideoModalOpen(true); };
-  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, duration: v.duration, sequenceOrder: v.sequenceOrder }); setVideoModalOpen(true); };
+  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", duration: 0, sequenceOrder: sequence.length, muxAssetId: "" }); setVideoModalOpen(true); };
+  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, duration: v.duration, sequenceOrder: v.sequenceOrder, muxAssetId: v.muxAssetId || "" }); setVideoModalOpen(true); };
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
   const openEditActivity = (a: Activity) => { setEditingActivity(a); setActForm({ title: a.title, description: a.description, sequenceOrder: a.sequenceOrder, passingScore: a.passingScore }); setActivityModalOpen(true); };
 
@@ -184,41 +184,6 @@ const ModuleDetailPage = () => {
       case "LINK": return "Link";
       case "VIDEO_EXTRA": return "Vídeo Extra";
       default: return type;
-    }
-  };
-
-  const handleMuxUpload = async (videoId: string) => {
-    try {
-      const { data } = await api.post(
-        `/courses/${courseId}/modules/${moduleId}/videos/${videoId}/mux-upload`
-      );
-      const { uploadUrl } = data.data ?? data;
-
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "video/*";
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
-
-        setUploading(videoId);
-        try {
-          await fetch(uploadUrl, {
-            method: "PUT",
-            body: file,
-            headers: { "Content-Type": file.type },
-          });
-          toast.success("Upload enviado! O vídeo ficará disponível em alguns minutos.");
-          qc.invalidateQueries({ queryKey: ["videos", moduleId] });
-        } catch {
-          toast.error("Erro ao enviar o vídeo.");
-        } finally {
-          setUploading(null);
-        }
-      };
-      input.click();
-    } catch {
-      toast.error("Erro ao iniciar upload no Mux.");
     }
   };
 
@@ -319,18 +284,6 @@ const ModuleDetailPage = () => {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          {item.type === "video" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleMuxUpload(item.data.id)}
-                              disabled={uploading === item.data.id}
-                              className="text-xs gap-1"
-                            >
-                              {uploading === item.data.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                              Mux
-                            </Button>
-                          )}
                           {item.type === "activity" && (
                             <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                           )}
@@ -455,6 +408,17 @@ const ModuleDetailPage = () => {
           <DialogHeader><DialogTitle>{editingVideo ? "Editar Aula" : "Nova Aula"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); saveVideoMut.mutate(); }} className="space-y-4">
             <div className="space-y-2"><Label>Título</Label><Input value={videoForm.title} onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })} required /></div>
+            
+            <div className="space-y-2">
+              <Label>Mux Asset ID</Label>
+              <Input 
+                value={videoForm.muxAssetId} 
+                onChange={(e) => setVideoForm({ ...videoForm, muxAssetId: e.target.value })} 
+                placeholder="Ex: dHg700wI8O3JlT3SyJxWS5aqTi2f3z00NII00uf8glPJrM" 
+              />
+              <p className="text-xs text-muted-foreground">O vídeo será buscado automaticamente no Mux.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Duração (seg)</Label><Input type="number" value={videoForm.duration} onChange={(e) => setVideoForm({ ...videoForm, duration: Number(e.target.value) })} /></div>
               <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.sequenceOrder} onChange={(e) => setVideoForm({ ...videoForm, sequenceOrder: Number(e.target.value) })} /></div>
@@ -583,6 +547,61 @@ const ModuleDetailPage = () => {
               <Button type="submit" disabled={saveMaterialMut.isPending}>{saveMaterialMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={muxLinkModalOpen} onOpenChange={setMuxLinkModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurar Vídeo Mux</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Mux Asset ID</Label>
+              <Input
+                placeholder="Cole o Asset ID do Mux aqui"
+                value={muxAssetId}
+                onChange={(e) => setMuxAssetId(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use esta opção se você já fez o upload diretamente no Mux e tem o Asset ID.
+              </p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Ou faça upload</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => {
+                if (activeVideoId) {
+                  setMuxLinkModalOpen(false);
+                  handleMuxUpload(activeVideoId);
+                }
+              }}
+              disabled={uploading === activeVideoId}
+            >
+              {uploading === activeVideoId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Fazer Upload de Arquivo
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMuxLinkModalOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => activeVideoId && linkMuxAssetMut.mutate({ videoId: activeVideoId, assetId: muxAssetId })}
+              disabled={!muxAssetId || linkMuxAssetMut.isPending}
+            >
+              {linkMuxAssetMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Vincular Asset
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
