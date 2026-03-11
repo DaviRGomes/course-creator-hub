@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, Upload } from "lucide-react";
 
 interface VideoItem { id: string; title: string; url: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
@@ -53,6 +53,7 @@ const ModuleDetailPage = () => {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
@@ -186,6 +187,41 @@ const ModuleDetailPage = () => {
     }
   };
 
+  const handleMuxUpload = async (videoId: string) => {
+    try {
+      const { data } = await api.post(
+        `/courses/${courseId}/modules/${moduleId}/videos/${videoId}/mux-upload`
+      );
+      const { uploadUrl } = data.data ?? data;
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "video/*";
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        setUploading(videoId);
+        try {
+          await fetch(uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": file.type },
+          });
+          toast.success("Upload enviado! O vídeo ficará disponível em alguns minutos.");
+          qc.invalidateQueries({ queryKey: ["videos", moduleId] });
+        } catch {
+          toast.error("Erro ao enviar o vídeo.");
+        } finally {
+          setUploading(null);
+        }
+      };
+      input.click();
+    } catch {
+      toast.error("Erro ao iniciar upload no Mux.");
+    }
+  };
+
   const isLoading = vLoading || aLoading;
 
   return (
@@ -277,6 +313,18 @@ const ModuleDetailPage = () => {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          {item.type === "video" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleMuxUpload(item.data.id)}
+                              disabled={uploading === item.data.id}
+                              className="text-xs gap-1"
+                            >
+                              {uploading === item.data.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              Mux
+                            </Button>
+                          )}
                           {item.type === "activity" && (
                             <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                           )}
