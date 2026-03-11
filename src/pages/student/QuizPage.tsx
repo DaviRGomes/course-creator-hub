@@ -4,8 +4,8 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const QuizPage = () => {
@@ -30,13 +30,34 @@ const QuizPage = () => {
     enabled: !!courseId,
   });
 
-  const { data: activity, isLoading } = useQuery({
+  const { data: activity, isLoading: activityLoading } = useQuery({
     queryKey: ["activity", quizId],
     queryFn: () =>
       api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}`)
         .then((r) => r.data.data ?? r.data),
     enabled: !!courseId,
   });
+
+  const { data: initialResult, isLoading: resultLoading } = useQuery({
+    queryKey: ["quiz-result", quizId],
+    queryFn: () =>
+      api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}/result`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => null),
+    enabled: !!courseId,
+  });
+
+  // Sincroniza resultado inicial se existir
+  useEffect(() => {
+    if (initialResult && !result) {
+      setResult(initialResult);
+      const prevAnswers: Record<string, string> = {};
+      initialResult.feedback?.forEach((f: any) => {
+        if (f.selectedOptionId) prevAnswers[String(f.questionId)] = String(f.selectedOptionId);
+      });
+      setAnswers(prevAnswers);
+    }
+  }, [initialResult, result]);
 
   const submitMut = useMutation({
     mutationFn: () => {
@@ -57,7 +78,9 @@ const QuizPage = () => {
     },
   });
 
-  if (isLoading || !courseId) {
+  const isLoading = activityLoading || resultLoading || !courseId;
+
+  if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -112,19 +135,23 @@ const QuizPage = () => {
       ) : (
         <>
           {submitted && (
-            <div className={cn("rounded-xl p-5 mb-6 flex items-center gap-4", passed ? "bg-success/10 border border-success/20" : "bg-destructive/10 border border-destructive/20")}>
-              {passed ? <CheckCircle2 className="h-8 w-8 text-success shrink-0" /> : <XCircle className="h-8 w-8 text-destructive shrink-0" />}
+            <div className={cn("rounded-xl p-5 mb-6 flex items-center gap-4", passed ? "bg-green-500/10 border border-green-500/20" : "bg-red-500/10 border border-red-500/20")}>
+              {passed ? <CheckCircle2 className="h-8 w-8 text-green-600 shrink-0" /> : <XCircle className="h-8 w-8 text-red-600 shrink-0" />}
               <div>
-                <p className={cn("font-semibold", passed ? "text-success" : "text-destructive")}>
+                <p className={cn("font-semibold", passed ? "text-green-700" : "text-red-700")}>
                   {passed ? "Aprovado!" : "Reprovado"}
                 </p>
-                <p className="text-sm text-muted-foreground">Pontuação: {score}%</p>
+                <p className="text-sm text-muted-foreground">Pontuação: {score}% (Mínimo: {activity.passingScore}%)</p>
               </div>
             </div>
           )}
 
           <div className="space-y-6">
             {questions.map((q: any, qIdx: number) => {
+              const feedback = result?.feedback?.find((f: any) => String(f.questionId) === String(q.id));
+              const correctOptionId = feedback?.correctOptionId;
+              const selectedOptionId = answers[q.id];
+
               return (
                 <div key={q.id} className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-start justify-between mb-4">
@@ -137,9 +164,22 @@ const QuizPage = () => {
 
                   <div className="space-y-2">
                     {(q.options || []).map((opt: any, oIdx: number) => {
-                      const isSelected = answers[q.id] === String(opt.id);
-                      const showCorrect = submitted && opt.isCorrect;
-                      const showWrong = submitted && isSelected && !opt.isCorrect;
+                      const isSelected = String(selectedOptionId) === String(opt.id);
+                      const isCorrect = String(correctOptionId) === String(opt.id);
+
+                      let optionClasses = "border-border hover:border-primary/40 text-foreground";
+
+                      if (submitted) {
+                        if (isCorrect) {
+                          optionClasses = "border-green-500 bg-green-500/10 text-green-700 font-medium";
+                        } else if (isSelected) {
+                          optionClasses = "border-red-500 bg-red-500/10 text-red-700";
+                        } else {
+                          optionClasses = "border-border text-muted-foreground opacity-60";
+                        }
+                      } else if (isSelected) {
+                        optionClasses = "border-primary bg-primary/5 text-foreground";
+                      }
 
                       return (
                         <button
@@ -147,18 +187,16 @@ const QuizPage = () => {
                           onClick={() => handleSelect(String(q.id), String(opt.id))}
                           disabled={submitted}
                           className={cn(
-                            "w-full text-left px-4 py-3 rounded-lg border text-sm transition-fast",
-                            !submitted && isSelected && "border-primary bg-primary/5 text-foreground",
-                            !submitted && !isSelected && "border-border hover:border-primary/40 text-foreground",
-                            showCorrect && "border-success bg-success/5 text-success",
-                            showWrong && "border-destructive bg-destructive/5 text-destructive",
-                            submitted && !showCorrect && !showWrong && "border-border text-muted-foreground opacity-60"
+                            "w-full text-left px-4 py-3 rounded-lg border text-sm transition-fast flex items-center justify-between",
+                            optionClasses
                           )}
                         >
-                          <span className="font-medium mr-2">{String.fromCharCode(65 + oIdx)}.</span>
-                          {opt.optionText}
-                          {showCorrect && <CheckCircle2 className="inline h-4 w-4 ml-2" />}
-                          {showWrong && <XCircle className="inline h-4 w-4 ml-2" />}
+                          <span>
+                            <span className="font-medium mr-2">{String.fromCharCode(65 + oIdx)}.</span>
+                            {opt.optionText}
+                          </span>
+                          {submitted && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
+                          {submitted && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
                         </button>
                       );
                     })}
@@ -174,6 +212,7 @@ const QuizPage = () => {
                 onClick={() => submitMut.mutate()}
                 disabled={Object.keys(answers).length < questions.length || submitMut.isPending}
               >
+                {submitMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Enviar Respostas
               </Button>
             </div>
@@ -186,6 +225,7 @@ const QuizPage = () => {
                   Tentar Novamente
                 </Button>
               )}
+              <div className="flex-1" />
               <Button onClick={() => navigate(`/learn/${slug}`)}>
                 {passed ? "✓ Continuar Curso" : "Voltar ao Curso"}
               </Button>
