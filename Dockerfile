@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Instala dependências primeiro (aproveita cache de camada)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copia o restante e builda
 COPY . .
