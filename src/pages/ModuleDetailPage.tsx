@@ -187,6 +187,41 @@ const ModuleDetailPage = () => {
     }
   };
 
+  const handleMuxUpload = async (videoId: string) => {
+    try {
+      const { data } = await api.post(
+        `/courses/${courseId}/modules/${moduleId}/videos/${videoId}/mux-upload`
+      );
+      const { uploadUrl } = data.data ?? data;
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "video/*";
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        setUploading(videoId);
+        try {
+          await fetch(uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": file.type },
+          });
+          toast.success("Upload enviado! O vídeo ficará disponível em alguns minutos.");
+          qc.invalidateQueries({ queryKey: ["videos", moduleId] });
+        } catch {
+          toast.error("Erro ao enviar o vídeo.");
+        } finally {
+          setUploading(null);
+        }
+      };
+      input.click();
+    } catch {
+      toast.error("Erro ao iniciar upload no Mux.");
+    }
+  };
+
   const isLoading = vLoading || aLoading;
 
   return (
