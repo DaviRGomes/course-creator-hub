@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -21,6 +21,7 @@ const LessonPlayerPage = () => {
   const queryClient = useQueryClient();
   const [completed, setCompleted] = useState(false);
   const autoMarked = useRef(false);
+  const playerRef = useRef<any>(null);
 
   useEffect(() => {
     autoMarked.current = false;
@@ -41,7 +42,7 @@ const LessonPlayerPage = () => {
     enabled: !!courseId,
   });
 
-  const { data: videos = [], isLoading: loadingVideos } = useQuery<any[]>({
+  const { data: videos = [], isLoading: loadingVideos, refetch: refetchVideos } = useQuery<any[]>({
     queryKey: ["videos", moduleId],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/videos`).then((r) => r.data.data ?? r.data),
     enabled: !!courseId,
@@ -57,6 +58,17 @@ const LessonPlayerPage = () => {
     sequence.filter((s: any) => s.status === "COMPLETED").map((s: any) => String(s.id))
   );
 
+  const currentIndex = videos.findIndex((v) => String(v.id) === lessonId);
+  const currentVideo = videos[currentIndex] ?? null;
+  const prevVideo = currentIndex > 0 ? videos[currentIndex - 1] : null;
+  const nextVideo = currentIndex < videos.length - 1 ? videos[currentIndex + 1] : null;
+
+  const isLocked = (index: number): boolean => {
+    if (index === 0) return false;
+    const prev = videos[index - 1];
+    return !completedIds.has(String(prev?.id));
+  };
+
   const watchMut = useMutation({
     mutationFn: () =>
       api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
@@ -68,6 +80,18 @@ const LessonPlayerPage = () => {
       queryClient.invalidateQueries({ queryKey: ["module", moduleId] });
       queryClient.invalidateQueries({ queryKey: ["course-overview", slug] });
       queryClient.invalidateQueries({ queryKey: ["student-modules", courseId] });
+      refetchVideos();
+
+      const idx = videos.findIndex((v) => String(v.id) === lessonId);
+      const next = videos[idx + 1];
+
+      if (next) {
+        setTimeout(() => {
+          navigate(`/learn/${slug}/modules/${moduleId}/lesson/${next.id}`);
+        }, 2000);
+      } else {
+        setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
+      }
     },
     onError: () => {
       setCompleted(true);
@@ -75,10 +99,20 @@ const LessonPlayerPage = () => {
     },
   });
 
-  const currentVideo = videos.find((v) => String(v.id) === lessonId);
-  const currentIndex = videos.findIndex((v) => String(v.id) === lessonId);
-  const prevVideo = currentIndex > 0 ? videos[currentIndex - 1] : null;
-  const nextVideo = currentIndex < videos.length - 1 ? videos[currentIndex + 1] : null;
+  const handleMarkWatched = () => {
+    if (completed || autoMarked.current || watchMut.isPending) return;
+    autoMarked.current = true;
+    watchMut.mutate();
+  };
+
+  const handleTimeUpdate = () => {
+    const player = playerRef.current;
+    if (!player || !player.duration) return;
+    const pct = (player.currentTime / player.duration) * 100;
+    if (pct >= 70 && !autoMarked.current && !completed) {
+      handleMarkWatched();
+    }
+  };
 
   if (loadingVideos || !courseId) {
     return (
@@ -99,6 +133,8 @@ const LessonPlayerPage = () => {
     );
   }
 
+  const isDone = completedIds.has(String(currentVideo.id)) || completed;
+
   return (
     <div>
       <button
@@ -112,16 +148,13 @@ const LessonPlayerPage = () => {
         <div className="lg:col-span-2 space-y-4">
           {currentVideo.muxPlaybackId && currentVideo.muxStatus === "ready" ? (
             <MuxPlayer
+              ref={playerRef}
               playbackId={currentVideo.muxPlaybackId}
               streamType="on-demand"
               className="w-full rounded-xl overflow-hidden"
               style={{ aspectRatio: "16/9" }}
-              onEnded={() => {
-                if (!completed && !autoMarked.current && !watchMut.isPending) {
-                  autoMarked.current = true;
-                  watchMut.mutate();
-                }
-              }}
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={handleMarkWatched}
               accentColor="#6366f1"
             />
           ) : currentVideo.muxStatus === "preparing" ? (
@@ -144,16 +177,18 @@ const LessonPlayerPage = () => {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-xl font-bold text-foreground">{currentVideo.title}</h1>
-              <p className="text-sm text-muted-foreground">Duração: {formatDuration(currentVideo.duration)}</p>
+              {currentVideo.duration > 0 && (
+                <p className="text-sm text-muted-foreground">Duração: {formatDuration(currentVideo.duration)}</p>
+              )}
             </div>
             <Button
-              variant={completed ? "default" : "outline"}
-              onClick={() => watchMut.mutate()}
-              disabled={completed || watchMut.isPending}
-              className={completed ? "bg-success hover:bg-success" : ""}
+              variant={isDone ? "default" : "outline"}
+              onClick={handleMarkWatched}
+              disabled={isDone || watchMut.isPending}
+              className={isDone ? "bg-success hover:bg-success" : ""}
             >
               <CheckCircle2 className="h-4 w-4" />
-              {completed ? "Concluída" : "Marcar como concluída"}
+              {isDone ? "Concluída" : "Marcar como concluída"}
             </Button>
           </div>
 
@@ -164,7 +199,16 @@ const LessonPlayerPage = () => {
               </Button>
             ) : <div />}
             {nextVideo ? (
-              <Button variant="ghost" onClick={() => navigate(`/learn/${slug}/modules/${moduleId}/lesson/${nextVideo.id}`)}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (!isDone) {
+                    toast.error("Conclua esta aula para desbloquear a próxima.");
+                    return;
+                  }
+                  navigate(`/learn/${slug}/modules/${moduleId}/lesson/${nextVideo.id}`);
+                }}
+              >
                 {nextVideo.title} <ArrowRight className="h-4 w-4" />
               </Button>
             ) : <div />}
@@ -176,28 +220,50 @@ const LessonPlayerPage = () => {
             <h3 className="font-semibold text-sm text-foreground">Aulas do módulo</h3>
           </div>
           <div className="divide-y divide-border">
-            {videos.map((v, i) => (
-              <button
-                key={v.id}
-                onClick={() => navigate(`/learn/${slug}/modules/${moduleId}/lesson/${v.id}`)}
-                className={cn(
-                  "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast hover:bg-accent/50",
-                  String(v.id) === lessonId && "bg-primary/5 border-l-2 border-l-primary"
-                )}
-              >
-                {(completedIds.has(String(v.id)) || (String(v.id) === lessonId && completed)) ? (
-                  <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-                ) : (
-                  <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm truncate", String(v.id) === lessonId ? "text-primary font-medium" : "text-foreground")}>
-                    {v.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{formatDuration(v.duration)}</p>
-                </div>
-              </button>
-            ))}
+            {videos.map((v, i) => {
+              const locked = isLocked(i);
+              const isCurrent = String(v.id) === lessonId;
+              const done = completedIds.has(String(v.id)) || (isCurrent && completed);
+
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => {
+                    if (locked) {
+                      toast.error("Conclua a aula anterior para desbloquear esta.");
+                      return;
+                    }
+                    navigate(`/learn/${slug}/modules/${moduleId}/lesson/${v.id}`);
+                  }}
+                  className={cn(
+                    "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast",
+                    isCurrent && "bg-primary/5 border-l-2 border-l-primary",
+                    locked ? "opacity-40 cursor-not-allowed" : "hover:bg-accent/50"
+                  )}
+                >
+                  <div className="flex-shrink-0 w-5 text-center">
+                    {done ? (
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    ) : locked ? (
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{i + 1}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm truncate",
+                      isCurrent ? "text-primary font-medium" : locked ? "text-muted-foreground" : "text-foreground"
+                    )}>
+                      {v.title}
+                    </p>
+                    {v.duration > 0 && (
+                      <p className="text-xs text-muted-foreground">{formatDuration(v.duration)}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
