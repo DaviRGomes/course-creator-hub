@@ -313,6 +313,18 @@ const ModuleDetailPage = () => {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          {item.type === "video" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleMuxUpload(item.data.id)}
+                              disabled={uploading === item.data.id}
+                              className="text-xs gap-1"
+                            >
+                              {uploading === item.data.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              Mux
+                            </Button>
+                          )}
                           {item.type === "activity" && (
                             <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                           )}

@@ -148,7 +148,36 @@ const LessonPlayerPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {(() => {
-            const embedUrl = getEmbedUrl(currentVideo.url);
+            // Mux Player (priority)
+            if (currentVideo.muxPlaybackId && currentVideo.muxStatus === "ready") {
+              return (
+                <MuxPlayer
+                  playbackId={currentVideo.muxPlaybackId}
+                  streamType="on-demand"
+                  className="w-full rounded-xl overflow-hidden"
+                  style={{ aspectRatio: "16/9" }}
+                  onEnded={() => {
+                    if (!completed && !autoMarked.current && !watchMut.isPending) {
+                      autoMarked.current = true;
+                      watchMut.mutate();
+                    }
+                  }}
+                  accentColor="#6366f1"
+                />
+              );
+            }
+            // Mux preparing
+            if (currentVideo.muxPlaybackId && currentVideo.muxStatus === "preparing") {
+              return (
+                <div className="w-full aspect-video rounded-xl bg-foreground/5 border border-border flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="h-10 w-10 text-primary/40 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-muted-foreground">⏳ Vídeo sendo processado...</p>
+                  </div>
+                </div>
+              );
+            }
+            // Fallback: direct video file
             const isDirectVideo = currentVideo.url?.match(/\.(mp4|webm|ogg)(\?|$)/);
             if (isDirectVideo) {
               return (
@@ -157,6 +186,8 @@ const LessonPlayerPage = () => {
                 </video>
               );
             }
+            // Fallback: embeddable URL (YouTube, Vimeo, Google Drive)
+            const embedUrl = getEmbedUrl(currentVideo.playbackUrl || currentVideo.url);
             return embedUrl ? (
               <iframe
                 src={embedUrl}
