@@ -53,6 +53,7 @@ const ModuleDetailPage = () => {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
