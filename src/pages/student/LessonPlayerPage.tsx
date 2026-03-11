@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
+import MuxPlayer from "@mux/mux-player-react";
 
 const getEmbedUrl = (url: string): string | null => {
   if (!url) return null;
