@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, Upload } from "lucide-react";
 
-interface VideoItem { id: string; title: string; url: string; duration: number; sequenceOrder: number; }
+interface VideoItem { id: string; title: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
 interface Question { id?: string; questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; }
 interface Activity { id: string; title: string; description: string; sequenceOrder: number; passingScore: number; questions?: Question[]; }
@@ -38,7 +38,7 @@ const ModuleDetailPage = () => {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string } | null>(null);
 
-  const [videoForm, setVideoForm] = useState({ title: "", url: "", duration: 0, sequenceOrder: 0 });
+  const [videoForm, setVideoForm] = useState({ title: "", duration: 0, sequenceOrder: 0 });
   const [actForm, setActForm] = useState({ title: "", description: "", sequenceOrder: 0, passingScore: 70 });
   const [qForm, setQForm] = useState<{ questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; correctAnswer: string }>({
     questionText: "", questionType: "MULTIPLE_CHOICE", orderIndex: 0, points: 10, options: [
@@ -151,8 +151,8 @@ const ModuleDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao salvar material"),
   });
 
-  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", url: "", duration: 0, sequenceOrder: sequence.length }); setVideoModalOpen(true); };
-  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, url: v.url, duration: v.duration, sequenceOrder: v.sequenceOrder }); setVideoModalOpen(true); };
+  const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", duration: 0, sequenceOrder: sequence.length }); setVideoModalOpen(true); };
+  const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, duration: v.duration, sequenceOrder: v.sequenceOrder }); setVideoModalOpen(true); };
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
   const openEditActivity = (a: Activity) => { setEditingActivity(a); setActForm({ title: a.title, description: a.description, sequenceOrder: a.sequenceOrder, passingScore: a.passingScore }); setActivityModalOpen(true); };
 
@@ -307,7 +307,13 @@ const ModuleDetailPage = () => {
                       </TableCell>
                       <TableCell className="font-medium">{item.data.title}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {item.type === "video" ? formatDuration((item.data as VideoItem).duration) : `Nota: ${(item.data as Activity).passingScore}%`}
+                        {item.type === "video" ? (
+                          <span className="flex items-center gap-2">
+                            {formatDuration((item.data as VideoItem).duration)}
+                            {(item.data as VideoItem).muxStatus === "ready" && <Badge variant="secondary" className="text-xs">Mux ✓</Badge>}
+                            {(item.data as VideoItem).muxStatus === "preparing" && <Badge variant="outline" className="text-xs text-amber-600">Processando</Badge>}
+                          </span>
+                        ) : `Nota: ${(item.data as Activity).passingScore}%`}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -449,7 +455,6 @@ const ModuleDetailPage = () => {
           <DialogHeader><DialogTitle>{editingVideo ? "Editar Aula" : "Nova Aula"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); saveVideoMut.mutate(); }} className="space-y-4">
             <div className="space-y-2"><Label>Título</Label><Input value={videoForm.title} onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })} required /></div>
-            <div className="space-y-2"><Label>URL do vídeo</Label><Input value={videoForm.url} onChange={(e) => setVideoForm({ ...videoForm, url: e.target.value })} placeholder="YouTube, Vimeo ou Google Drive" required /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Duração (seg)</Label><Input type="number" value={videoForm.duration} onChange={(e) => setVideoForm({ ...videoForm, duration: Number(e.target.value) })} /></div>
               <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.sequenceOrder} onChange={(e) => setVideoForm({ ...videoForm, sequenceOrder: Number(e.target.value) })} /></div>

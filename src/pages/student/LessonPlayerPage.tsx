@@ -9,22 +9,6 @@ import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 
-const getEmbedUrl = (url: string): string | null => {
-  if (!url) return null;
-  // Google Drive: /file/d/ID/view → /file/d/ID/preview
-  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-  // YouTube
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  // If it's already an embeddable URL or direct video
-  if (url.match(/\.(mp4|webm|ogg)(\?|$)/)) return url;
-  return url;
-};
-
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
@@ -42,18 +26,6 @@ const LessonPlayerPage = () => {
     autoMarked.current = false;
     setCompleted(false);
   }, [lessonId]);
-
-  // Auto-mark as completed after 30s for iframe videos (YouTube/Drive)
-  useEffect(() => {
-    if (completed || autoMarked.current) return;
-    const timer = setTimeout(() => {
-      if (!completed && !autoMarked.current && !watchMut.isPending) {
-        autoMarked.current = true;
-        watchMut.mutate();
-      }
-    }, 30000);
-    return () => clearTimeout(timer);
-  }, [lessonId, completed]);
 
   const { data: course } = useQuery({
     queryKey: ["course-by-slug", slug],
@@ -103,15 +75,6 @@ const LessonPlayerPage = () => {
     },
   });
 
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    if (completed || autoMarked.current || watchMut.isPending) return;
-    const video = e.currentTarget;
-    if (video.duration > 0 && video.currentTime / video.duration >= 0.8) {
-      autoMarked.current = true;
-      watchMut.mutate();
-    }
-  };
-
   const currentVideo = videos.find((v) => String(v.id) === lessonId);
   const currentIndex = videos.findIndex((v) => String(v.id) === lessonId);
   const prevVideo = currentIndex > 0 ? videos[currentIndex - 1] : null;
@@ -147,63 +110,36 @@ const LessonPlayerPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          {(() => {
-            // Mux Player (priority)
-            if (currentVideo.muxPlaybackId && currentVideo.muxStatus === "ready") {
-              return (
-                <MuxPlayer
-                  playbackId={currentVideo.muxPlaybackId}
-                  streamType="on-demand"
-                  className="w-full rounded-xl overflow-hidden"
-                  style={{ aspectRatio: "16/9" }}
-                  onEnded={() => {
-                    if (!completed && !autoMarked.current && !watchMut.isPending) {
-                      autoMarked.current = true;
-                      watchMut.mutate();
-                    }
-                  }}
-                  accentColor="#6366f1"
-                />
-              );
-            }
-            // Mux preparing
-            if (currentVideo.muxPlaybackId && currentVideo.muxStatus === "preparing") {
-              return (
-                <div className="w-full aspect-video rounded-xl bg-foreground/5 border border-border flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2 className="h-10 w-10 text-primary/40 mx-auto mb-2 animate-spin" />
-                    <p className="text-sm text-muted-foreground">⏳ Vídeo sendo processado...</p>
-                  </div>
-                </div>
-              );
-            }
-            // Fallback: direct video file
-            const isDirectVideo = currentVideo.url?.match(/\.(mp4|webm|ogg)(\?|$)/);
-            if (isDirectVideo) {
-              return (
-                <video controls className="w-full aspect-video rounded-xl bg-black" onTimeUpdate={handleTimeUpdate}>
-                  <source src={currentVideo.url} />
-                </video>
-              );
-            }
-            // Fallback: embeddable URL (YouTube, Vimeo, Google Drive)
-            const embedUrl = getEmbedUrl(currentVideo.playbackUrl || currentVideo.url);
-            return embedUrl ? (
-              <iframe
-                src={embedUrl}
-                className="w-full aspect-video rounded-xl border border-border"
-                allow="autoplay; encrypted-media; fullscreen"
-                allowFullScreen
-              />
-            ) : (
-              <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
-                <div className="text-center">
-                  <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Vídeo não disponível</p>
-                </div>
+          {currentVideo.muxPlaybackId && currentVideo.muxStatus === "ready" ? (
+            <MuxPlayer
+              playbackId={currentVideo.muxPlaybackId}
+              streamType="on-demand"
+              className="w-full rounded-xl overflow-hidden"
+              style={{ aspectRatio: "16/9" }}
+              onEnded={() => {
+                if (!completed && !autoMarked.current && !watchMut.isPending) {
+                  autoMarked.current = true;
+                  watchMut.mutate();
+                }
+              }}
+              accentColor="#6366f1"
+            />
+          ) : currentVideo.muxStatus === "preparing" ? (
+            <div className="w-full aspect-video rounded-xl bg-foreground/5 border border-border flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="h-10 w-10 text-primary/40 mx-auto mb-2 animate-spin" />
+                <p className="text-sm text-muted-foreground">⏳ Vídeo sendo processado...</p>
               </div>
-            );
-          })()}
+            </div>
+          ) : (
+            <div className="bg-foreground/5 rounded-xl aspect-video flex items-center justify-center border border-border">
+              <div className="text-center">
+                <PlayCircle className="h-16 w-16 text-primary/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Vídeo não disponível</p>
+                <p className="text-xs text-muted-foreground mt-1">Aguarde o upload do vídeo</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-start justify-between">
             <div>
