@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8095}
+    container_name: cursos_web
+    ports:
+      - "${FRONT_PORT:-3039}:80"
+    restart: unless-stopped
