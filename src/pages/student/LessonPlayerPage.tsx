@@ -74,24 +74,13 @@ const LessonPlayerPage = () => {
       api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
     onSuccess: () => {
       setCompleted(true);
-      toast.success("Aula marcada como concluída!");
+      toast.success("Aula marcada como concluída! Continue assistindo.");
       queryClient.invalidateQueries({ queryKey: ["module-sequence", courseId, Number(moduleId)] });
       queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
       queryClient.invalidateQueries({ queryKey: ["module", moduleId] });
       queryClient.invalidateQueries({ queryKey: ["course-overview", slug] });
       queryClient.invalidateQueries({ queryKey: ["student-modules", courseId] });
       refetchVideos();
-
-      const idx = videos.findIndex((v) => String(v.id) === lessonId);
-      const next = videos[idx + 1];
-
-      if (next) {
-        setTimeout(() => {
-          navigate(`/learn/${slug}/modules/${moduleId}/lesson/${next.id}`);
-        }, 2000);
-      } else {
-        setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
-      }
     },
     onError: () => {
       setCompleted(true);
@@ -154,7 +143,18 @@ const LessonPlayerPage = () => {
               className="w-full rounded-xl overflow-hidden"
               style={{ aspectRatio: "16/9" }}
               onTimeUpdate={handleTimeUpdate}
-              onEnded={handleMarkWatched}
+              onEnded={() => {
+                handleMarkWatched();
+                const idx = videos.findIndex((v) => String(v.id) === lessonId);
+                const next = videos[idx + 1];
+                if (next) {
+                  setTimeout(() => {
+                    navigate(`/learn/${slug}/modules/${moduleId}/lesson/${next.id}`);
+                  }, 2000);
+                } else {
+                  setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
+                }
+              }}
               accentColor="#6366f1"
             />
           ) : currentVideo.muxStatus === "preparing" ? (
