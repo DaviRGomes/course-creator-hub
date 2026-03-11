@@ -418,10 +418,7 @@ const ModuleDetailPage = () => {
               <p className="text-xs text-muted-foreground">O vídeo será buscado automaticamente no Mux.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Duração (seg)</Label><Input type="number" value={videoForm.duration} onChange={(e) => setVideoForm({ ...videoForm, duration: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.sequenceOrder} onChange={(e) => setVideoForm({ ...videoForm, sequenceOrder: Number(e.target.value) })} /></div>
-            </div>
+            <div className="space-y-2"><Label>Posição (seq)</Label><Input type="number" value={videoForm.sequenceOrder} onChange={(e) => setVideoForm({ ...videoForm, sequenceOrder: Number(e.target.value) })} /></div>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setVideoModalOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saveVideoMut.isPending}>{saveVideoMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button>

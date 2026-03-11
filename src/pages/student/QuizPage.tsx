@@ -171,9 +171,11 @@ const QuizPage = () => {
 
                       if (submitted) {
                         if (isCorrect) {
-                          optionClasses = "border-green-500 bg-green-500/10 text-green-700 font-medium";
+                          // Se a atividade estiver finalizada, a opção que for a correta deve ficar com borda verde e fundo verde suave
+                          optionClasses = "border-green-500/50 bg-green-500/10 text-green-700 font-medium";
                         } else if (isSelected) {
-                          optionClasses = "border-red-500 bg-red-500/10 text-red-700";
+                          // Se o usuário tiver selecionado uma opção errada, essa opção deve ficar com borda vermelha
+                          optionClasses = "border-red-500/50 bg-red-500/10 text-red-700";
                         } else {
                           optionClasses = "border-border text-muted-foreground opacity-60";
                         }
@@ -191,12 +193,14 @@ const QuizPage = () => {
                             optionClasses
                           )}
                         >
-                          <span>
-                            <span className="font-medium mr-2">{String.fromCharCode(65 + oIdx)}.</span>
+                          <span className="flex items-center gap-2">
+                            <span className="font-medium min-w-[20px]">{String.fromCharCode(65 + oIdx)}.</span>
                             {opt.optionText}
                           </span>
-                          {submitted && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
-                          {submitted && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            {submitted && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" title="Correta" />}
+                            {submitted && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600" title="Sua resposta" />}
+                          </div>
                         </button>
                       );
                     })}
