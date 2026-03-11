@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2 } from "lucide-react";
 
 interface VideoItem { id: string; title: string; muxAssetId?: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
@@ -53,7 +53,6 @@ const ModuleDetailPage = () => {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
-  const [uploading, setUploading] = useState<string | null>(null);
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
@@ -547,61 +546,6 @@ const ModuleDetailPage = () => {
               <Button type="submit" disabled={saveMaterialMut.isPending}>{saveMaterialMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={muxLinkModalOpen} onOpenChange={setMuxLinkModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configurar Vídeo Mux</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Mux Asset ID</Label>
-              <Input
-                placeholder="Cole o Asset ID do Mux aqui"
-                value={muxAssetId}
-                onChange={(e) => setMuxAssetId(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Use esta opção se você já fez o upload diretamente no Mux e tem o Asset ID.
-              </p>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Ou faça upload</span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => {
-                if (activeVideoId) {
-                  setMuxLinkModalOpen(false);
-                  handleMuxUpload(activeVideoId);
-                }
-              }}
-              disabled={uploading === activeVideoId}
-            >
-              {uploading === activeVideoId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Fazer Upload de Arquivo
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMuxLinkModalOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={() => activeVideoId && linkMuxAssetMut.mutate({ videoId: activeVideoId, assetId: muxAssetId })}
-              disabled={!muxAssetId || linkMuxAssetMut.isPending}
-            >
-              {linkMuxAssetMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Vincular Asset
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
