@@ -7,6 +7,7 @@ import {
   Users, BookOpen, PlayCircle, Trophy,
   Clock, TrendingUp, UserCheck, Cpu, Activity,
   LayoutDashboard, Terminal, Filter, Search, RefreshCw, AlertTriangle,
+  Award,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
