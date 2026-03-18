@@ -139,15 +139,6 @@ const DashboardPage = () => {
     retry: false,
   });
 
-  interface RecentCertificate {
-    id: number;
-    studentName: string;
-    studentEmail: string;
-    courseName: string;
-    certificateCode: string;
-    progressPercent: number;
-    issuedAt: string;
-  }
 
   const { data: certificates = [], isLoading: loadingCerts } = useQuery<RecentCertificate[]>({
     queryKey: ["admin-certificates"],
