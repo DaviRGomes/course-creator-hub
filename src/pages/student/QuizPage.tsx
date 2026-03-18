@@ -198,8 +198,8 @@ const QuizPage = () => {
                             {opt.optionText}
                           </span>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
-                            {submitted && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" title="Correta" />}
-                            {submitted && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600" title="Sua resposta" />}
+                            {submitted && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="Correta" />}
+                            {submitted && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600" aria-label="Sua resposta" />}
                           </div>
                         </button>
                       );

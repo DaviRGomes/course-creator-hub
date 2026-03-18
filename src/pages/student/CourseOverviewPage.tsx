@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BookOpen, PlayCircle, FileQuestion, Circle, CheckCircle2, Lock, Award } from "lucide-react";
+import CertificateStatusCard from "@/components/CertificateStatusCard";
 import { cn } from "@/lib/utils";
 
 const formatDuration = (secs: number) => {
@@ -206,26 +207,12 @@ const CourseOverviewPage = () => {
             })}
           </div>
 
-          {(() => {
-            const allCompleted = sequenceQueries.length > 0 &&
-              sequenceQueries.every(q =>
-                Array.isArray(q.data) &&
-                (q.data as any[]).length > 0 &&
-                (q.data as any[]).every((item: any) => item.status === "COMPLETED")
-              );
-
-            return allCompleted ? (
-              <div className="mt-8 text-center bg-card border border-border rounded-xl p-6">
-                <p className="text-foreground font-medium mb-4">
-                  🎉 Parabéns! Você concluiu todos os módulos do curso.
-                </p>
-                <Button onClick={() => navigate(`/certificate/${courseId}`)} className="gap-2">
-                  <Award className="h-4 w-4" />
-                  Ver Certificado
-                </Button>
-              </div>
-            ) : null;
-          })()}
+          {/* Certificate status */}
+          {courseId && (
+            <div className="mt-8">
+              <CertificateStatusCard courseId={courseId} />
+            </div>
+          )}
         </>
       )}
     </div>
