@@ -130,6 +130,23 @@ const DashboardPage = () => {
     retry: false,
   });
 
+  interface RecentCertificate {
+    id: number;
+    studentName: string;
+    studentEmail: string;
+    courseName: string;
+    certificateCode: string;
+    progressPercent: number;
+    issuedAt: string;
+  }
+
+  const { data: certificates = [], isLoading: loadingCerts } = useQuery<RecentCertificate[]>({
+    queryKey: ["admin-certificates"],
+    queryFn: () => api.get("/admin/dashboard/certificates").then((r) => r.data.data ?? r.data),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+
   // dados para gráficos
   const userPie = stats
     ? [
