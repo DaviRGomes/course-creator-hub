@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BookOpen, PlayCircle, FileQuestion, Circle, CheckCircle2, Lock, Award } from "lucide-react";
+import CertificateStatusCard from "@/components/CertificateStatusCard";
 import { cn } from "@/lib/utils";
 
 const formatDuration = (secs: number) => {
