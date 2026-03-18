@@ -348,6 +348,59 @@ const DashboardPage = () => {
         )}
       </div>
 
+      {/* ── Últimos Certificados ────────────────────────────────────────── */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Award className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-semibold text-foreground">Últimos Certificados Emitidos</h2>
+          </div>
+          <Badge variant="secondary">{certificates.length} recentes</Badge>
+        </div>
+
+        {loadingCerts ? (
+          <div className="p-5 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
+        ) : certificates.length === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground text-center">Nenhum certificado emitido ainda.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-border">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Aluno</th>
+                  <th className="text-left px-3 py-3 font-medium text-muted-foreground">Curso</th>
+                  <th className="text-left px-3 py-3 font-medium text-muted-foreground">Progresso</th>
+                  <th className="text-left px-3 py-3 font-medium text-muted-foreground">Data</th>
+                  <th className="text-left px-3 py-3 font-medium text-muted-foreground">Código</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {certificates.map((cert) => (
+                  <tr key={cert.id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="text-sm font-medium text-foreground">{cert.studentName}</p>
+                      <p className="text-muted-foreground">{cert.studentEmail}</p>
+                    </td>
+                    <td className="px-3 py-3 text-foreground">{cert.courseName}</td>
+                    <td className="px-3 py-3">
+                      <Badge variant="secondary">{cert.progressPercent}%</Badge>
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString("pt-BR") : "—"}
+                    </td>
+                    <td className="px-3 py-3">
+                      <code className="text-[10px] bg-secondary px-1.5 py-0.5 rounded font-mono text-muted-foreground">
+                        {cert.certificateCode}
+                      </code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* ── Seção de Logs ─────────────────────────────────────────────────── */}
       <div className="space-y-4">
 
