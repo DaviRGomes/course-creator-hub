@@ -241,6 +241,7 @@ const DashboardPage = () => {
         <StatCard icon={TrendingUp} label="Tentativas" value={stats.engagement.totalAttempts} sub={`${stats.engagement.passedAttempts} aprovados`} colorClass="bg-sky-500" />
         <StatCard icon={Cpu} label="Memória JVM" value={`${stats.server.memoryPercent}%`} sub={`${stats.server.memoryUsedMB} / ${stats.server.memoryMaxMB} MB`} colorClass={stats.server.memoryPercent > 80 ? "bg-red-500" : "bg-slate-500"} />
         <StatCard icon={Clock} label="Uptime" value={formatUptime(stats.server.uptimeMinutes)} colorClass="bg-indigo-500" />
+        <StatCard icon={Award} label="Certificados Emitidos" value={(stats as any).certificatesIssued ?? 0} colorClass="bg-amber-500" />
       </div>
 
       {/* ── Gráficos ──────────────────────────────────────────────────────── */}
