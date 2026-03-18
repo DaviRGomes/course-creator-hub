@@ -41,6 +41,15 @@ interface TopEndpoint {
   total: number;
   avgMs: number;
 }
+interface RecentCertificate {
+  id: number;
+  studentName: string;
+  studentEmail: string;
+  courseName: string;
+  certificateCode: string;
+  progressPercent: number;
+  issuedAt: string;
+}
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 const StatCard = ({
