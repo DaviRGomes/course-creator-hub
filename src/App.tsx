@@ -20,6 +20,8 @@ import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
 import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
 import DashboardPage from "@/pages/DashboardPage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
+import FinancialPage from "@/pages/FinancialPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +56,8 @@ const App = () => (
               <Route path="courses/:id" element={<CourseDetailPage />} />
               <Route path="courses/:id/modules/:moduleId" element={<ModuleDetailPage />} />
               <Route path="certificate-settings" element={<CertificateSettingsPage />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
+              <Route path="financial" element={<FinancialPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

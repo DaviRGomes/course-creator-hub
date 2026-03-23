@@ -11,6 +11,8 @@ import {
   Sun,
   LayoutDashboard,
   Award,
+  Plug,
+  DollarSign,
 } from "lucide-react";
 import LogoIcon from "@/components/LogoIcon";
 import { useState } from "react";
@@ -21,6 +23,8 @@ const navItems = [
   { to: "/admin/dashboard", label: "Monitoramento", icon: LayoutDashboard },
   { to: "/admin/users", label: "Usuários", icon: Users },
   { to: "/admin/courses", label: "Cursos", icon: BookOpen },
+  { to: "/admin/financial", label: "Financeiro", icon: DollarSign },
+  { to: "/admin/integrations", label: "Integrações", icon: Plug },
   { to: "/admin/certificate-settings", label: "Certificado", icon: Award },
 ];
 
