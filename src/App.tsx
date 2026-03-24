@@ -19,6 +19,7 @@ import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
 import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
+import CertificatesPage from "@/pages/CertificatesPage";
 import DashboardPage from "@/pages/DashboardPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import FinancialPage from "@/pages/FinancialPage";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="courses/:id" element={<CourseDetailPage />} />
               <Route path="courses/:id/modules/:moduleId" element={<ModuleDetailPage />} />
               <Route path="certificate-settings" element={<CertificateSettingsPage />} />
+              <Route path="certificates" element={<CertificatesPage />} />
               <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="financial" element={<FinancialPage />} />
             </Route>

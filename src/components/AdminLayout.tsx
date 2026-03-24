@@ -25,7 +25,8 @@ const navItems = [
   { to: "/admin/courses", label: "Cursos", icon: BookOpen },
   { to: "/admin/financial", label: "Financeiro", icon: DollarSign },
   { to: "/admin/integrations", label: "Integrações", icon: Plug },
-  { to: "/admin/certificate-settings", label: "Certificado", icon: Award },
+  { to: "/admin/certificates", label: "Certificados", icon: Award },
+  { to: "/admin/certificate-settings", label: "Config. Certificado", icon: Award },
 ];
 
 const AdminLayout = () => {
