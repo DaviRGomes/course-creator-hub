@@ -173,15 +173,23 @@ const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
 // ─── n8n ─────────────────────────────────────────────────────────────────────
 
 const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [webhookUrl, setWebhookUrl] = useState(status?.n8nWebhookUrl || "");
+  const queryClient = useQueryClient();
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
+
+  useEffect(() => {
+    if (status) {
+      setWebhookUrl(status.n8nWebhookUrl || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/n8n", { webhookUrl, webhookSecret: secret });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("n8n salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
