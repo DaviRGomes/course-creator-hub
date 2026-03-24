@@ -91,15 +91,24 @@ const SaveButton = ({
 // ─── Kiwify ──────────────────────────────────────────────────────────────────
 
 const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [clientId, setClientId] = useState(status?.kiwifyAccountId ? "***configurado***" : "");
+  const queryClient = useQueryClient();
+  const [clientId, setClientId] = useState("");
   const [clientSecret, setSecret] = useState("");
-  const [accountId, setAccountId] = useState(status?.kiwifyAccountId || "");
+  const [accountId, setAccountId] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setAccountId(status.kiwifyAccountId || "");
+      if (status.kiwifyConnected) setClientId("***configurado***");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/kiwify", { clientId, clientSecret, accountId });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("Kiwify salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
