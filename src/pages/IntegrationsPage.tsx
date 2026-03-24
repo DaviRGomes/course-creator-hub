@@ -383,14 +383,22 @@ const ProductMappingCard = ({
 // ─── Google Sheets ────────────────────────────────────────────────────────────
 
 const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [spreadsheetId, setSpreadsheetId] = useState(status?.sheetsSpreadsheetId || "");
+  const queryClient = useQueryClient();
+  const [spreadsheetId, setSpreadsheetId] = useState("");
   const [credentialsJson, setCredentialsJson] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setSpreadsheetId(status.sheetsSpreadsheetId || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/sheets", { spreadsheetId, credentialsJson });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("Google Sheets salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
