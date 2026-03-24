@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -91,15 +91,24 @@ const SaveButton = ({
 // ─── Kiwify ──────────────────────────────────────────────────────────────────
 
 const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [clientId, setClientId] = useState(status?.kiwifyAccountId ? "***configurado***" : "");
+  const queryClient = useQueryClient();
+  const [clientId, setClientId] = useState("");
   const [clientSecret, setSecret] = useState("");
-  const [accountId, setAccountId] = useState(status?.kiwifyAccountId || "");
+  const [accountId, setAccountId] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setAccountId(status.kiwifyAccountId || "");
+      if (status.kiwifyConnected) setClientId("***configurado***");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/kiwify", { clientId, clientSecret, accountId });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("Kiwify salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
@@ -139,7 +148,7 @@ const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
             type="password"
             value={clientSecret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder={status?.kiwifyConnected ? "Deixe vazio para manter" : "seu-client-secret"}
+            placeholder={status?.kiwifyConnected ? "●●●●●●●● (já configurado — deixe vazio para manter)" : "seu-client-secret"}
             className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
           />
           <p className="text-xs text-muted-foreground mt-1">
@@ -164,15 +173,23 @@ const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
 // ─── n8n ─────────────────────────────────────────────────────────────────────
 
 const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [webhookUrl, setWebhookUrl] = useState(status?.n8nWebhookUrl || "");
+  const queryClient = useQueryClient();
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
+
+  useEffect(() => {
+    if (status) {
+      setWebhookUrl(status.n8nWebhookUrl || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/n8n", { webhookUrl, webhookSecret: secret });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("n8n salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
@@ -366,14 +383,22 @@ const ProductMappingCard = ({
 // ─── Google Sheets ────────────────────────────────────────────────────────────
 
 const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [spreadsheetId, setSpreadsheetId] = useState(status?.sheetsSpreadsheetId || "");
+  const queryClient = useQueryClient();
+  const [spreadsheetId, setSpreadsheetId] = useState("");
   const [credentialsJson, setCredentialsJson] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setSpreadsheetId(status.sheetsSpreadsheetId || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/sheets", { spreadsheetId, credentialsJson });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("Google Sheets salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
@@ -409,7 +434,7 @@ const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
           <textarea
             value={credentialsJson}
             onChange={(e) => setCredentialsJson(e.target.value)}
-            placeholder='Cole o conteúdo do credentials.json aqui...'
+            placeholder={status?.sheetsConnected ? "Credenciais já configuradas — cole novamente só para atualizar" : 'Cole o conteúdo do credentials.json aqui...'}
             rows={4}
             className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm font-mono bg-background resize-none"
           />
@@ -428,17 +453,29 @@ const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
 // ─── SMTP ────────────────────────────────────────────────────────────────────
 
 const SmtpCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [host, setHost] = useState(status?.smtpHost || "");
-  const [port, setPort] = useState<number>(status?.smtpPort || 587);
-  const [user, setUser] = useState(status?.smtpUser || "");
-  const [fromName, setFromName] = useState(status?.smtpFromName || "");
-  const [fromEmail, setFromEmail] = useState(status?.smtpFromEmail || "");
+  const queryClient = useQueryClient();
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState<number>(587);
+  const [user, setUser] = useState("");
+  const [fromName, setFromName] = useState("");
+  const [fromEmail, setFromEmail] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setHost(status.smtpHost || "");
+      setPort(status.smtpPort || 587);
+      setUser(status.smtpUser || "");
+      setFromName(status.smtpFromName || "");
+      setFromEmail(status.smtpFromEmail || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/smtp", { host, port, user, fromName, fromEmail });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("SMTP salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
