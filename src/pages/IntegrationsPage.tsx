@@ -453,17 +453,29 @@ const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
 // ─── SMTP ────────────────────────────────────────────────────────────────────
 
 const SmtpCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const [host, setHost] = useState(status?.smtpHost || "");
-  const [port, setPort] = useState<number>(status?.smtpPort || 587);
-  const [user, setUser] = useState(status?.smtpUser || "");
-  const [fromName, setFromName] = useState(status?.smtpFromName || "");
-  const [fromEmail, setFromEmail] = useState(status?.smtpFromEmail || "");
+  const queryClient = useQueryClient();
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState<number>(587);
+  const [user, setUser] = useState("");
+  const [fromName, setFromName] = useState("");
+  const [fromEmail, setFromEmail] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      setHost(status.smtpHost || "");
+      setPort(status.smtpPort || 587);
+      setUser(status.smtpUser || "");
+      setFromName(status.smtpFromName || "");
+      setFromEmail(status.smtpFromEmail || "");
+    }
+  }, [status]);
 
   const save = async () => {
     setLoading(true);
     try {
       await api.put("/admin/integrations/smtp", { host, port, user, fromName, fromEmail });
+      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
       toast.success("SMTP salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
