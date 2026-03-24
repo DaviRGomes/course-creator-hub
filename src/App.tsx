@@ -19,6 +19,7 @@ import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
 import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
+import CertificatesPage from "@/pages/CertificatesPage";
 import DashboardPage from "@/pages/DashboardPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import FinancialPage from "@/pages/FinancialPage";
