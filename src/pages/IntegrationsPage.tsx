@@ -148,7 +148,7 @@ const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
             type="password"
             value={clientSecret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder={status?.kiwifyConnected ? "Deixe vazio para manter" : "seu-client-secret"}
+            placeholder={status?.kiwifyConnected ? "●●●●●●●● (já configurado — deixe vazio para manter)" : "seu-client-secret"}
             className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
           />
           <p className="text-xs text-muted-foreground mt-1">
