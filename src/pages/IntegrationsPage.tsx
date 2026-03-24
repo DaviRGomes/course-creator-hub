@@ -434,7 +434,7 @@ const SheetsCard = ({ status }: { status: IntegrationStatus | undefined }) => {
           <textarea
             value={credentialsJson}
             onChange={(e) => setCredentialsJson(e.target.value)}
-            placeholder='Cole o conteúdo do credentials.json aqui...'
+            placeholder={status?.sheetsConnected ? "Credenciais já configuradas — cole novamente só para atualizar" : 'Cole o conteúdo do credentials.json aqui...'}
             rows={4}
             className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm font-mono bg-background resize-none"
           />
