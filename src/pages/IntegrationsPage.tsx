@@ -177,7 +177,9 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
+  const [testMessage, setTestMessage] = useState("");
 
   useEffect(() => {
     if (status) {
@@ -190,6 +192,7 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
     try {
       await api.put("/admin/integrations/n8n", { webhookUrl, webhookSecret: secret });
       await queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      setTestResult(null);
       toast.success("n8n salvo!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao salvar");
@@ -199,11 +202,18 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
   };
 
   const test = async () => {
+    setTesting(true);
+    setTestResult(null);
     try {
-      await api.post("/admin/integrations/n8n/test");
+      const res = await api.post("/admin/integrations/n8n/test");
       setTestResult("ok");
-    } catch {
+      setTestMessage(res.data?.data || "Webhook respondeu com sucesso!");
+    } catch (e: any) {
       setTestResult("error");
+      const msg = e.response?.data?.message || "Sem resposta do servidor. Verifique se a URL está correta e o n8n está rodando.";
+      setTestMessage(msg);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -219,7 +229,7 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
           <label className="text-sm text-muted-foreground">URL do Webhook</label>
           <input
             value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
+            onChange={(e) => { setWebhookUrl(e.target.value); setTestResult(null); }}
             placeholder="https://n8n.seudominio.com/webhook/kiwify"
             className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
           />
@@ -247,17 +257,17 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
           <SaveButton onClick={save} loading={loading} />
           <button
             onClick={test}
-            className="border border-border px-4 py-2 rounded-lg text-sm"
+            disabled={testing || !webhookUrl}
+            className="border border-border px-4 py-2 rounded-lg text-sm disabled:opacity-50 flex items-center gap-1"
           >
-            🔌 Testar conexão
+            {testing ? "⏳ Testando..." : "🔌 Testar conexão"}
           </button>
         </div>
         {testResult && (
-          <p className={`text-sm ${testResult === "ok" ? "text-green-600" : "text-destructive"}`}>
-            {testResult === "ok"
-              ? "✅ Webhook respondeu com sucesso!"
-              : "❌ Falha. Verifique a URL e tente novamente."}
-          </p>
+          <div className={`rounded-lg px-3 py-2 text-sm ${testResult === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-destructive"}`}>
+            {testResult === "ok" ? "✅ " : "❌ "}
+            {testMessage}
+          </div>
         )}
       </div>
     </IntegrationCard>
@@ -269,20 +279,25 @@ const N8nCard = ({ status }: { status: IntegrationStatus | undefined }) => {
 const ProductMappingCard = ({
   courses,
   mappings,
+  mappingsError,
   refetch,
 }: {
   courses: Course[] | undefined;
   mappings: Mapping[] | undefined;
+  mappingsError: Error | null;
   refetch: () => void;
 }) => {
   const [productName, setProductName] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
   const add = async () => {
     if (!productName.trim() || !courseId) {
       toast.error("Preencha o nome do produto e selecione o curso.");
       return;
     }
+    setAdding(true);
     try {
       await api.post("/admin/integrations/product-mapping", {
         productName: productName.trim(),
@@ -294,13 +309,22 @@ const ProductMappingCard = ({
       toast.success("Mapeamento adicionado!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao adicionar");
+    } finally {
+      setAdding(false);
     }
   };
 
   const remove = async (id: number) => {
-    await api.delete(`/admin/integrations/product-mapping/${id}`);
-    refetch();
-    toast.success("Removido!");
+    setRemovingId(id);
+    try {
+      await api.delete(`/admin/integrations/product-mapping/${id}`);
+      refetch();
+      toast.success("Mapeamento removido!");
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Erro ao remover");
+    } finally {
+      setRemovingId(null);
+    }
   };
 
   return (
@@ -310,71 +334,93 @@ const ProductMappingCard = ({
       description="Define qual curso cada produto da Kiwify libera"
       connected={!!mappings?.length}
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Quando um aluno comprar na Kiwify, o sistema matricula automaticamente
-          no curso correspondente.
+          Quando um aluno comprar na Kiwify, o sistema identifica o produto e matricula
+          automaticamente no curso correspondente.
         </p>
 
-        {mappings && mappings.length > 0 && (
+        {/* Tabela de mapeamentos existentes */}
+        {mappingsError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            ⚠️ Erro ao carregar mapeamentos: {mappingsError.message}
+          </div>
+        ) : mappings === undefined ? (
+          <div className="text-sm text-muted-foreground text-center py-3">Carregando...</div>
+        ) : mappings.length === 0 ? (
+          <div className="border border-dashed border-border rounded-lg p-4 text-center text-sm text-muted-foreground">
+            Nenhum mapeamento configurado ainda.<br />
+            Adicione abaixo para ativar a matrícula automática.
+          </div>
+        ) : (
           <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted">
                 <tr className="text-left text-muted-foreground text-xs">
-                  <th className="px-3 py-2">Produto (Kiwify)</th>
-                  <th className="px-3 py-2">Curso</th>
-                  <th className="px-3 py-2 w-20"></th>
+                  <th className="px-3 py-2">Produto na Kiwify</th>
+                  <th className="px-3 py-2">Curso liberado</th>
+                  <th className="px-3 py-2 w-24 text-right">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {mappings.map((m) => (
-                  <tr key={m.id}>
-                    <td className="px-3 py-2 font-mono text-xs">{m.productName}</td>
-                    <td className="px-3 py-2 text-sm">{m.courseTitle}</td>
-                    <td className="px-3 py-2">
+                  <tr key={m.id} className="hover:bg-muted/30">
+                    <td className="px-3 py-2 font-mono text-xs text-foreground">{m.productName}</td>
+                    <td className="px-3 py-2 text-sm text-foreground">{m.courseTitle}</td>
+                    <td className="px-3 py-2 text-right">
                       <button
                         onClick={() => remove(m.id)}
-                        className="text-destructive hover:underline text-xs"
+                        disabled={removingId === m.id}
+                        className="text-destructive hover:underline text-xs disabled:opacity-50"
                       >
-                        Remover
+                        {removingId === m.id ? "Removendo..." : "Remover"}
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="px-3 py-2 bg-muted/30 border-t border-border text-xs text-muted-foreground">
+              {mappings.length} mapeamento{mappings.length !== 1 ? "s" : ""} ativo{mappings.length !== 1 ? "s" : ""}
+            </div>
           </div>
         )}
 
-        <div className="flex gap-2">
-          <input
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-            placeholder="Nome exato do produto na Kiwify"
-            className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background"
-          />
-          <select
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
-            className="border border-border rounded-lg px-3 py-2 text-sm bg-background"
-          >
-            <option value="">Selecionar curso</option>
-            {courses?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={add}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm whitespace-nowrap"
-          >
-            + Adicionar
-          </button>
+        {/* Formulário para adicionar novo mapeamento */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-foreground">Adicionar novo mapeamento</p>
+          <div className="flex gap-2">
+            <input
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              placeholder="Nome exato do produto na Kiwify"
+              className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background"
+            />
+            <select
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className="border border-border rounded-lg px-3 py-2 text-sm bg-background min-w-[160px]"
+            >
+              <option value="">Selecionar curso</option>
+              {courses?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={add}
+              disabled={adding || !productName.trim() || !courseId}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm whitespace-nowrap disabled:opacity-50"
+            >
+              {adding ? "Adicionando..." : "+ Adicionar"}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            ⚠️ O nome deve ser idêntico ao cadastrado na Kiwify (acentos e maiúsculas importam)
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          ⚠️ Nome deve ser exatamente igual ao da Kiwify (incluindo acentos e maiúsculas)
-        </p>
       </div>
     </IntegrationCard>
   );
@@ -570,10 +616,10 @@ const IntegrationsPage = () => {
     queryFn: () => api.get("/courses").then((r) => r.data.data ?? r.data),
   });
 
-  const { data: mappings, refetch: refetchMappings } = useQuery<Mapping[]>({
+  const { data: mappings, error: mappingsError, refetch: refetchMappings } = useQuery<Mapping[], Error>({
     queryKey: ["product-mapping"],
     queryFn: () =>
-      api.get("/admin/integrations/product-mapping").then((r) => r.data.data),
+      api.get("/admin/integrations/product-mapping").then((r) => r.data.data ?? []),
   });
 
   return (
@@ -590,6 +636,7 @@ const IntegrationsPage = () => {
       <ProductMappingCard
         courses={courses}
         mappings={mappings}
+        mappingsError={mappingsError}
         refetch={refetchMappings}
       />
       <SheetsCard status={status} />
