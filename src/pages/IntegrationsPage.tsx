@@ -280,13 +280,12 @@ const ProductMappingCard = ({
   courses,
   mappings,
   mappingsError,
-  refetch,
 }: {
   courses: Course[] | undefined;
   mappings: Mapping[] | undefined;
   mappingsError: Error | null;
-  refetch: () => void;
 }) => {
+  const queryClient = useQueryClient();
   const [productName, setProductName] = useState("");
   const [courseId, setCourseId] = useState("");
   const [adding, setAdding] = useState(false);
@@ -305,7 +304,7 @@ const ProductMappingCard = ({
       });
       setProductName("");
       setCourseId("");
-      refetch();
+      await queryClient.invalidateQueries({ queryKey: ["product-mapping"] });
       toast.success("Mapeamento adicionado!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao adicionar");
@@ -318,7 +317,7 @@ const ProductMappingCard = ({
     setRemovingId(id);
     try {
       await api.delete(`/admin/integrations/product-mapping/${id}`);
-      refetch();
+      await queryClient.invalidateQueries({ queryKey: ["product-mapping"] });
       toast.success("Mapeamento removido!");
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao remover");
@@ -637,7 +636,6 @@ const IntegrationsPage = () => {
         courses={courses}
         mappings={mappings}
         mappingsError={mappingsError}
-        refetch={refetchMappings}
       />
       <SheetsCard status={status} />
       <SmtpCard status={status} />
