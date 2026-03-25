@@ -154,6 +154,7 @@ const ProfilePage = () => {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -175,6 +176,7 @@ const ProfilePage = () => {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -195,6 +197,7 @@ const ProfilePage = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               placeholder="••••••••"
+              autoComplete="new-password"
             />
           </div>
 
