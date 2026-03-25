@@ -59,10 +59,10 @@ const IntegrationCard = ({
         </div>
       </div>
       <span
-        className={`text-xs px-3 py-1 rounded-full font-medium ${
+        className={`text-xs px-3 py-1 rounded-full font-medium border ${
           connected
-            ? "bg-green-100 text-green-700"
-            : "bg-muted text-muted-foreground"
+            ? "bg-green-100 text-green-700 border-green-200"
+            : "bg-amber-50 text-amber-700 border-amber-200"
         }`}
       >
         {connected ? "● Conectado" : "○ Não configurado"}
@@ -347,22 +347,22 @@ const ProductMappingCard = ({
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-muted">
-                <tr className="text-left text-muted-foreground text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-left text-xs font-semibold text-gray-600">
                   <th className="px-3 py-2 w-1/3">Curso</th>
                   <th className="px-3 py-2">Nome do produto na Kiwify</th>
                   <th className="px-3 py-2 w-20"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border bg-white">
                 {courses.map((c) => {
                   const isSaving = savingId === c.id;
                   const currentVal = inputs[c.id] ?? "";
                   const savedVal = mappings?.find((m) => m.courseId === c.id)?.productName ?? "";
                   const isDirty = currentVal !== savedVal;
                   return (
-                    <tr key={c.id} className="hover:bg-muted/20">
-                      <td className="px-3 py-2 font-medium text-foreground text-xs">{c.title}</td>
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-gray-800 text-xs">{c.title}</td>
                       <td className="px-3 py-2">
                         <input
                           value={currentVal}
@@ -386,7 +386,7 @@ const ProductMappingCard = ({
                 })}
               </tbody>
             </table>
-            <div className="px-3 py-2 bg-muted/30 border-t border-border text-xs text-muted-foreground">
+            <div className="px-3 py-2 bg-gray-50 border-t border-border text-xs text-gray-500">
               {configuredCount} de {courses.length} curso{courses.length !== 1 ? "s" : ""} vinculado{configuredCount !== 1 ? "s" : ""}
               {" · "}
               <span className="text-muted-foreground">Nome deve ser idêntico ao da Kiwify (acentos e maiúsculas importam)</span>
