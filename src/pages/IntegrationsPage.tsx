@@ -286,140 +286,113 @@ const ProductMappingCard = ({
   mappingsError: Error | null;
 }) => {
   const queryClient = useQueryClient();
-  const [productName, setProductName] = useState("");
-  const [courseId, setCourseId] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [removingId, setRemovingId] = useState<number | null>(null);
+  // Estado local: courseId → productName digitado pelo usuário
+  const [inputs, setInputs] = useState<Record<number, string>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
 
-  const add = async () => {
-    if (!productName.trim() || !courseId) {
-      toast.error("Preencha o nome do produto e selecione o curso.");
-      return;
-    }
-    setAdding(true);
+  // Pré-carrega inputs com os valores já salvos no banco
+  useEffect(() => {
+    if (!mappings || !courses) return;
+    const map: Record<number, string> = {};
+    courses.forEach((c) => {
+      const existing = mappings.find((m) => m.courseId === c.id);
+      map[c.id] = existing ? existing.productName : "";
+    });
+    setInputs(map);
+  }, [mappings, courses]);
+
+  const save = async (courseId: number) => {
+    setSavingId(courseId);
     try {
-      await api.post("/admin/integrations/product-mapping", {
-        productName: productName.trim(),
-        courseId: Number(courseId),
+      await api.put(`/admin/integrations/product-mapping/course/${courseId}`, {
+        productName: inputs[courseId] ?? "",
       });
-      setProductName("");
-      setCourseId("");
       await queryClient.invalidateQueries({ queryKey: ["product-mapping"] });
-      toast.success("Mapeamento adicionado!");
+      const name = inputs[courseId]?.trim();
+      toast.success(name ? `Produto "${name}" vinculado!` : "Vínculo removido.");
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao adicionar");
+      toast.error(e.response?.data?.message || "Erro ao salvar");
     } finally {
-      setAdding(false);
+      setSavingId(null);
     }
   };
 
-  const remove = async (id: number) => {
-    setRemovingId(id);
-    try {
-      await api.delete(`/admin/integrations/product-mapping/${id}`);
-      await queryClient.invalidateQueries({ queryKey: ["product-mapping"] });
-      toast.success("Mapeamento removido!");
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao remover");
-    } finally {
-      setRemovingId(null);
-    }
-  };
+  const configuredCount = mappings?.length ?? 0;
 
   return (
     <IntegrationCard
       icon="🔗"
       title="Produtos → Cursos"
       description="Define qual curso cada produto da Kiwify libera"
-      connected={!!mappings?.length}
+      connected={configuredCount > 0}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Quando um aluno comprar na Kiwify, o sistema identifica o produto e matricula
-          automaticamente no curso correspondente.
+          Para cada curso, informe o nome exato do produto cadastrado na Kiwify.
+          Deixe em branco para desativar a matrícula automática daquele curso.
         </p>
 
-        {/* Tabela de mapeamentos existentes */}
-        {mappingsError ? (
+        {mappingsError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            ⚠️ Erro ao carregar mapeamentos: {mappingsError.message}
+            ⚠️ Erro ao carregar dados: {mappingsError.message}
           </div>
-        ) : mappings === undefined ? (
-          <div className="text-sm text-muted-foreground text-center py-3">Carregando...</div>
-        ) : mappings.length === 0 ? (
+        )}
+
+        {!courses ? (
+          <div className="text-sm text-muted-foreground text-center py-4">Carregando cursos...</div>
+        ) : courses.length === 0 ? (
           <div className="border border-dashed border-border rounded-lg p-4 text-center text-sm text-muted-foreground">
-            Nenhum mapeamento configurado ainda.<br />
-            Adicione abaixo para ativar a matrícula automática.
+            Nenhum curso cadastrado ainda. Crie um curso primeiro.
           </div>
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted">
                 <tr className="text-left text-muted-foreground text-xs">
-                  <th className="px-3 py-2">Produto na Kiwify</th>
-                  <th className="px-3 py-2">Curso liberado</th>
-                  <th className="px-3 py-2 w-24 text-right">Ação</th>
+                  <th className="px-3 py-2 w-1/3">Curso</th>
+                  <th className="px-3 py-2">Nome do produto na Kiwify</th>
+                  <th className="px-3 py-2 w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {mappings.map((m) => (
-                  <tr key={m.id} className="hover:bg-muted/30">
-                    <td className="px-3 py-2 font-mono text-xs text-foreground">{m.productName}</td>
-                    <td className="px-3 py-2 text-sm text-foreground">{m.courseTitle}</td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        onClick={() => remove(m.id)}
-                        disabled={removingId === m.id}
-                        className="text-destructive hover:underline text-xs disabled:opacity-50"
-                      >
-                        {removingId === m.id ? "Removendo..." : "Remover"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {courses.map((c) => {
+                  const isSaving = savingId === c.id;
+                  const currentVal = inputs[c.id] ?? "";
+                  const savedVal = mappings?.find((m) => m.courseId === c.id)?.productName ?? "";
+                  const isDirty = currentVal !== savedVal;
+                  return (
+                    <tr key={c.id} className="hover:bg-muted/20">
+                      <td className="px-3 py-2 font-medium text-foreground text-xs">{c.title}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          value={currentVal}
+                          onChange={(e) => setInputs((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                          onKeyDown={(e) => e.key === "Enter" && isDirty && save(c.id)}
+                          placeholder="Ex: Conexões Sociais PRO"
+                          className="w-full border border-border rounded px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          onClick={() => save(c.id)}
+                          disabled={isSaving || !isDirty}
+                          className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-40 whitespace-nowrap"
+                        >
+                          {isSaving ? "..." : "Salvar"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <div className="px-3 py-2 bg-muted/30 border-t border-border text-xs text-muted-foreground">
-              {mappings.length} mapeamento{mappings.length !== 1 ? "s" : ""} ativo{mappings.length !== 1 ? "s" : ""}
+              {configuredCount} de {courses.length} curso{courses.length !== 1 ? "s" : ""} vinculado{configuredCount !== 1 ? "s" : ""}
+              {" · "}
+              <span className="text-muted-foreground">Nome deve ser idêntico ao da Kiwify (acentos e maiúsculas importam)</span>
             </div>
           </div>
         )}
-
-        {/* Formulário para adicionar novo mapeamento */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-foreground">Adicionar novo mapeamento</p>
-          <div className="flex gap-2">
-            <input
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              placeholder="Nome exato do produto na Kiwify"
-              className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background"
-            />
-            <select
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              className="border border-border rounded-lg px-3 py-2 text-sm bg-background min-w-[160px]"
-            >
-              <option value="">Selecionar curso</option>
-              {courses?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={add}
-              disabled={adding || !productName.trim() || !courseId}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm whitespace-nowrap disabled:opacity-50"
-            >
-              {adding ? "Adicionando..." : "+ Adicionar"}
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            ⚠️ O nome deve ser idêntico ao cadastrado na Kiwify (acentos e maiúsculas importam)
-          </p>
-        </div>
       </div>
     </IntegrationCard>
   );
