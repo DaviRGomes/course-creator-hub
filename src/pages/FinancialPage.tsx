@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,6 +115,20 @@ const FinancialPage = () => {
     retry: false,
   });
 
+  // Busca mapeamentos configurados para popular o select mesmo sem vendas
+  const { data: mappings } = useQuery<{ productName: string; courseTitle: string }[]>({
+    queryKey: ["product-mapping"],
+    queryFn: () =>
+      api.get("/admin/integrations/product-mapping").then((r) => r.data.data ?? []),
+  });
+
+  // Combina produtos dos mapeamentos + produtos reais de eventos (sem duplicatas)
+  const availableProducts = useMemo(() => {
+    const fromMappings = (mappings ?? []).map((m) => m.productName).filter(Boolean);
+    const fromEvents   = report?.availableProducts ?? [];
+    return [...new Set([...fromMappings, ...fromEvents])].sort();
+  }, [mappings, report?.availableProducts]);
+
   const applyFilter = () =>
     setApplied({ start: startDate, end: endDate, product: selectedCourse });
 
@@ -167,8 +181,6 @@ const FinancialPage = () => {
         vendas: count,
       }))
     : [];
-
-  const availableProducts = report?.availableProducts ?? [];
 
   return (
     <div className="space-y-6">
