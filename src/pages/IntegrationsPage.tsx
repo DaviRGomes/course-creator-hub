@@ -6,8 +6,6 @@ import { toast } from "sonner";
 // ─── tipos ───────────────────────────────────────────────────────────────────
 
 interface IntegrationStatus {
-  kiwifyConnected: boolean;
-  kiwifyAccountId: string | null;
   n8nWebhookUrl: string | null;
   n8nConnected: boolean;
   sheetsSpreadsheetId: string | null;
@@ -87,88 +85,6 @@ const SaveButton = ({
     {loading ? "Salvando..." : "Salvar"}
   </button>
 );
-
-// ─── Kiwify ──────────────────────────────────────────────────────────────────
-
-const KiwifyCard = ({ status }: { status: IntegrationStatus | undefined }) => {
-  const queryClient = useQueryClient();
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setSecret] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (status) {
-      setAccountId(status.kiwifyAccountId || "");
-      if (status.kiwifyConnected) setClientId("***configurado***");
-    }
-  }, [status]);
-
-  const save = async () => {
-    setLoading(true);
-    try {
-      await api.put("/admin/integrations/kiwify", { clientId, clientSecret, accountId });
-      await queryClient.invalidateQueries({ queryKey: ["integrations"] });
-      toast.success("Kiwify salvo!");
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao salvar");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <IntegrationCard
-      icon="🛒"
-      title="Kiwify"
-      description="Relatório financeiro de vendas e reembolsos"
-      connected={!!status?.kiwifyConnected}
-    >
-      <div className="space-y-3">
-        <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
-          <p className="font-medium mb-1">Como obter as credenciais:</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li>Acesse Kiwify → Apps → API</li>
-            <li>Clique em "Criar API Key"</li>
-            <li>Copie o Client ID, Client Secret e Account ID</li>
-          </ol>
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Client ID</label>
-          <input
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            placeholder="seu-client-id"
-            className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
-          />
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Client Secret</label>
-          <input
-            type="password"
-            value={clientSecret}
-            onChange={(e) => setSecret(e.target.value)}
-            placeholder={status?.kiwifyConnected ? "●●●●●●●● (já configurado — deixe vazio para manter)" : "seu-client-secret"}
-            className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Expira em 96h — o sistema renova automaticamente
-          </p>
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Account ID</label>
-          <input
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            placeholder="seu-account-id"
-            className="w-full border border-border rounded-lg px-3 py-2 mt-1 text-sm bg-background"
-          />
-        </div>
-        <SaveButton onClick={save} loading={loading} />
-      </div>
-    </IntegrationCard>
-  );
-};
 
 // ─── n8n ─────────────────────────────────────────────────────────────────────
 
@@ -603,7 +519,6 @@ const IntegrationsPage = () => {
         </p>
       </div>
 
-      <KiwifyCard status={status} />
       <N8nCard status={status} />
       <ProductMappingCard
         courses={courses}

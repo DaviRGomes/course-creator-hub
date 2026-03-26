@@ -141,16 +141,12 @@ const FinancialPage = () => {
         </button>
       </div>
 
-      {/* Kiwify não configurado */}
+      {/* Erro ao carregar relatório */}
       {isError && (
         <div className="border border-amber-200 bg-amber-50 rounded-xl p-6 text-center">
-          <p className="text-amber-700 font-medium">
-            {(error as any)?.response?.data?.message?.includes("Kiwify")
-              ? "Credenciais da Kiwify não configuradas"
-              : "Erro ao carregar relatório"}
-          </p>
+          <p className="text-amber-700 font-medium">Erro ao carregar relatório</p>
           <p className="text-amber-600 text-sm mt-1">
-            Acesse Integrações → Kiwify para configurar as credenciais
+            {(error as any)?.response?.data?.message || "Verifique se há dados de venda registrados no período selecionado."}
           </p>
         </div>
       )}
