@@ -54,10 +54,6 @@ const LessonPlayerPage = () => {
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
     enabled: !!courseId,
   });
-    queryKey: ["materials", String(moduleId)],
-    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/materials`).then((r) => r.data.data ?? r.data).catch(() => []),
-    enabled: !!courseId,
-  });
 
   const completedIds = new Set(
     sequence.filter((s: any) => s.status === "COMPLETED").map((s: any) => String(s.id))
