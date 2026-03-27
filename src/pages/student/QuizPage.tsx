@@ -73,6 +73,7 @@ const QuizPage = () => {
     },
     onSuccess: (data) => {
       setResult(data);
+      setRetrying(false);
       queryClient.invalidateQueries({
         queryKey: ["module-sequence", courseId, Number(moduleId)],
       });
