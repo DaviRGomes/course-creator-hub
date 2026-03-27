@@ -50,7 +50,7 @@ const QuizPage = () => {
 
   // Sincroniza resultado inicial se existir
   useEffect(() => {
-    if (initialResult && !result) {
+    if (initialResult && !result && !retrying) {
       setResult(initialResult);
       const prevAnswers: Record<string, string> = {};
       initialResult.feedback?.forEach((f: any) => {
@@ -58,7 +58,7 @@ const QuizPage = () => {
       });
       setAnswers(prevAnswers);
     }
-  }, [initialResult, result]);
+  }, [initialResult, result, retrying]);
 
   const submitMut = useMutation({
     mutationFn: () => {
