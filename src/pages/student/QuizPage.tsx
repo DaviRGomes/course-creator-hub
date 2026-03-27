@@ -15,6 +15,7 @@ const QuizPage = () => {
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<any>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const { data: course } = useQuery({
     queryKey: ["course-by-slug", slug],
