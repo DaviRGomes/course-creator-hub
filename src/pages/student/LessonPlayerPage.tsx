@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock, FileQuestion, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
