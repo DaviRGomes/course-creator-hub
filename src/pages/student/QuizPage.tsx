@@ -15,6 +15,7 @@ const QuizPage = () => {
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<any>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const { data: course } = useQuery({
     queryKey: ["course-by-slug", slug],
@@ -49,7 +50,7 @@ const QuizPage = () => {
 
   // Sincroniza resultado inicial se existir
   useEffect(() => {
-    if (initialResult && !result) {
+    if (initialResult && !result && !retrying) {
       setResult(initialResult);
       const prevAnswers: Record<string, string> = {};
       initialResult.feedback?.forEach((f: any) => {
@@ -57,7 +58,7 @@ const QuizPage = () => {
       });
       setAnswers(prevAnswers);
     }
-  }, [initialResult, result]);
+  }, [initialResult, result, retrying]);
 
   const submitMut = useMutation({
     mutationFn: () => {
@@ -72,6 +73,7 @@ const QuizPage = () => {
     },
     onSuccess: (data) => {
       setResult(data);
+      setRetrying(false);
       queryClient.invalidateQueries({
         queryKey: ["module-sequence", courseId, Number(moduleId)],
       });
@@ -225,7 +227,7 @@ const QuizPage = () => {
           {submitted && (
             <div className="mt-6 flex justify-between">
               {!passed && (
-                <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
+                <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); setRetrying(true); }}>
                   Tentar Novamente
                 </Button>
               )}
