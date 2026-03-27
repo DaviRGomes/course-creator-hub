@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock, FileQuestion, Circle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
+import ModuleSidebar from "@/components/ModuleSidebar";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -51,12 +52,6 @@ const LessonPlayerPage = () => {
   const { data: sequence = [] } = useQuery<any[]>({
     queryKey: ["module-sequence", courseId, Number(moduleId)],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
-    enabled: !!courseId,
-  });
-
-  const { data: materials = [] } = useQuery<any[]>({
-    queryKey: ["materials", String(moduleId)],
-    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/materials`).then((r) => r.data.data ?? r.data).catch(() => []),
     enabled: !!courseId,
   });
 
@@ -221,94 +216,14 @@ const LessonPlayerPage = () => {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold text-sm text-foreground">Conteúdo do módulo</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {sequence.map((item: any) => {
-              const isCurrent = item.type === "VIDEO" && String(item.id) === lessonId;
-              const done = item.status === "COMPLETED" || (isCurrent && completed);
-              const locked = item.status === "LOCKED";
-
-              return (
-                <button
-                  key={`${item.type}-${item.id}`}
-                  disabled={locked}
-                  onClick={() => {
-                    if (locked) {
-                      toast.error("Conclua o item anterior para desbloquear.");
-                      return;
-                    }
-                    if (item.type === "VIDEO") {
-                      navigate(`/learn/${slug}/modules/${moduleId}/lesson/${item.id}`);
-                    } else {
-                      navigate(`/learn/${slug}/modules/${moduleId}/quiz/${item.id}`);
-                    }
-                  }}
-                  className={cn(
-                    "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast",
-                    isCurrent && "bg-primary/5 border-l-2 border-l-primary",
-                    locked ? "opacity-40 cursor-not-allowed" : "hover:bg-accent/50"
-                  )}
-                >
-                  <div className="flex-shrink-0 w-5 text-center">
-                    {done ? (
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    ) : locked ? (
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-border" />
-                    )}
-                  </div>
-                  <div className="flex-shrink-0">
-                    {item.type === "VIDEO" ? (
-                      <PlayCircle className="h-4 w-4 text-primary" />
-                    ) : (
-                      <FileQuestion className="h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm truncate",
-                      isCurrent ? "text-primary font-medium" : locked ? "text-muted-foreground" : "text-foreground"
-                    )}>
-                      {item.title}
-                    </p>
-                  </div>
-                  {item.type === "VIDEO" && item.duration > 0 && (
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{formatDuration(item.duration)}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {materials.length > 0 && (
-            <div className="border-t border-border px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                📁 Materiais de Apoio
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {materials.map((m: any) => (
-                  <a
-                    key={m.id}
-                    href={m.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
-                  >
-                    {m.type === "PDF" && "📄"}
-                    {m.type === "IMAGE" && "🖼️"}
-                    {m.type === "LINK" && "🔗"}
-                    {m.type === "VIDEO_EXTRA" && "🎬"}
-                    {m.title}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ModuleSidebar
+          courseId={courseId}
+          moduleId={moduleId!}
+          slug={slug!}
+          currentId={lessonId}
+          currentType="VIDEO"
+          completed={completed}
+        />
       </div>
     </div>
   );
