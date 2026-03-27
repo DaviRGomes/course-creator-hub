@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
+import ModuleSidebar from "@/components/ModuleSidebar";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
