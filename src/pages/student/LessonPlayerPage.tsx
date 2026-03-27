@@ -54,8 +54,6 @@ const LessonPlayerPage = () => {
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
     enabled: !!courseId,
   });
-
-  const { data: materials = [] } = useQuery<any[]>({
     queryKey: ["materials", String(moduleId)],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/materials`).then((r) => r.data.data ?? r.data).catch(() => []),
     enabled: !!courseId,
