@@ -62,7 +62,7 @@ const App = () => (
               <Route path="financial" element={<FinancialPage />} />
             </Route>
 
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
