@@ -226,7 +226,7 @@ const QuizPage = () => {
           {submitted && (
             <div className="mt-6 flex justify-between">
               {!passed && (
-                <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); }}>
+                <Button variant="outline" onClick={() => { setAnswers({}); setResult(null); setRetrying(true); }}>
                   Tentar Novamente
                 </Button>
               )}
