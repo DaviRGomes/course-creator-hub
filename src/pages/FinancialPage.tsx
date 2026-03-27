@@ -11,12 +11,15 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 interface TopCourse {
   productName: string;
   count: number;
   revenue: number;
+  netRevenue: number;
+  totalFees: number;
   lastBuyerName: string;
   lastBuyerEmail: string;
   lastBuyerAt: string;
@@ -28,6 +31,8 @@ interface Order {
   created_at: string;
   status: string;
   product_price: number;
+  kiwify_fee_cents: number;
+  my_commission_cents: number;
   customer?: { name: string; email: string };
   product?: { name: string };
   payment_method?: string;
@@ -44,7 +49,11 @@ interface FinancialReport {
   totalRevenue: number;
   totalRefunded: number;
   netRevenue: number;
+  totalKiwifyFees: number;
+  totalNetCommission: number;
+  netMarginPercent: number;
   avgTicket: number;
+  avgNetTicket: number;
   refundCount: number;
   salesByCourse: Record<string, number>;
   salesByDay: Record<string, number>;
@@ -67,36 +76,81 @@ const paymentLabel: Record<string, string> = {
   boleto:      "Boleto",
 };
 
+// ── Helpers de datas ──────────────────────────────────────────────
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const daysAgoStr = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+};
+
+// ── StatCard ──────────────────────────────────────────────────────
 const StatCard = ({
   label,
   value,
-  color,
   sub,
+  color,
+  badge,
 }: {
   label: string;
   value: string;
-  color?: string;
   sub?: string;
+  color?: string;
+  badge?: { text: string; color: string };
 }) => (
-  <div className="border border-border rounded-xl p-4 bg-card">
-    <p className={`text-2xl font-bold ${color ?? "text-foreground"}`}>{value}</p>
-    <p className="text-sm text-muted-foreground mt-1">{label}</p>
-    {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+  <div className="border border-border rounded-xl p-4 bg-card space-y-1">
+    <div className="flex items-start justify-between gap-2">
+      <p className={`text-2xl font-bold ${color ?? "text-foreground"}`}>{value}</p>
+      {badge && (
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.color}`}>
+          {badge.text}
+        </span>
+      )}
+    </div>
+    <p className="text-sm text-muted-foreground">{label}</p>
+    {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
   </div>
 );
 
-const FinancialPage = () => {
-  const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    .toISOString()
-    .slice(0, 10);
+// ── ProgressBar bruto/líquido ─────────────────────────────────────
+const RevenueBar = ({ gross, net, fees }: { gross: number; net: number; fees: number }) => {
+  const netPct  = gross > 0 ? Math.round((net  / gross) * 100) : 0;
+  const feePct  = gross > 0 ? Math.round((fees / gross) * 100) : 0;
+  return (
+    <div className="border border-border rounded-xl p-4 bg-card">
+      <p className="text-sm font-medium text-foreground mb-3">Distribuição da receita bruta</p>
+      <div className="flex h-6 rounded-full overflow-hidden mb-3">
+        <div
+          className="bg-green-500 flex items-center justify-center text-[10px] text-white font-bold transition-all"
+          style={{ width: `${netPct}%` }}
+          title={`Líquido: ${netPct}%`}
+        >
+          {netPct > 10 ? `${netPct}%` : ""}
+        </div>
+        <div
+          className="bg-red-400 flex items-center justify-center text-[10px] text-white font-bold transition-all"
+          style={{ width: `${feePct}%` }}
+          title={`Taxa Kiwify: ${feePct}%`}
+        >
+          {feePct > 10 ? `${feePct}%` : ""}
+        </div>
+      </div>
+      <div className="flex gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-green-500" /> Líquido ({netPct}%)</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-red-400" /> Taxa Kiwify ({feePct}%)</span>
+      </div>
+    </div>
+  );
+};
 
-  const [startDate,     setStartDate]     = useState(firstOfMonth);
-  const [endDate,       setEndDate]       = useState(today.toISOString().slice(0, 10));
+// ── Componente principal ──────────────────────────────────────────
+const FinancialPage = () => {
+  const [startDate,      setStartDate]      = useState(daysAgoStr(30));
+  const [endDate,        setEndDate]        = useState(todayStr());
   const [selectedCourse, setSelectedCourse] = useState("");
   const [applied, setApplied] = useState({
-    start:   firstOfMonth,
-    end:     today.toISOString().slice(0, 10),
+    start:   daysAgoStr(30),
+    end:     todayStr(),
     product: "",
   });
 
@@ -115,14 +169,12 @@ const FinancialPage = () => {
     retry: false,
   });
 
-  // Busca mapeamentos configurados para popular o select mesmo sem vendas
   const { data: mappings } = useQuery<{ productName: string; courseTitle: string }[]>({
     queryKey: ["product-mapping"],
     queryFn: () =>
       api.get("/admin/integrations/product-mapping").then((r) => r.data.data ?? []),
   });
 
-  // Combina produtos dos mapeamentos + produtos reais de eventos (sem duplicatas)
   const availableProducts = useMemo(() => {
     const fromMappings = (mappings ?? []).map((m) => m.productName).filter(Boolean);
     const fromEvents   = report?.availableProducts ?? [];
@@ -137,18 +189,27 @@ const FinancialPage = () => {
     setApplied((p) => ({ ...p, product: "" }));
   };
 
+  // Atalhos de período
+  const setPeriod = (days: number) => {
+    const s = daysAgoStr(days);
+    const e = todayStr();
+    setStartDate(s);
+    setEndDate(e);
+    setApplied((p) => ({ ...p, start: s, end: e }));
+  };
+
   const exportCSV = () => {
     if (!report?.orders?.length) return;
-    const headers = ["Data", "Ref", "Cliente", "Email", "Cidade", "UF", "Produto", "Valor", "Pagamento", "Parcelas"];
+    const headers = ["Data", "Ref", "Cliente", "Email", "Produto", "Bruto", "Taxa Kiwify", "Líquido", "Pagamento", "Parcelas"];
     const rows = report.orders.map((o) => [
       fmtDate(o.created_at),
       o.order_ref ?? "",
       o.customer?.name ?? "",
       o.customer?.email ?? "",
-      o.customer_city ?? "",
-      o.customer_state ?? "",
       o.product?.name ?? "",
       `R$ ${(o.product_price / 100).toFixed(2)}`,
+      `R$ ${((o.kiwify_fee_cents ?? 0) / 100).toFixed(2)}`,
+      `R$ ${((o.my_commission_cents ?? 0) / 100).toFixed(2)}`,
       paymentLabel[o.payment_method ?? ""] ?? o.payment_method ?? "",
       String(o.installments ?? 1),
     ]);
@@ -166,21 +227,16 @@ const FinancialPage = () => {
         .map(([date, count]) => ({ date, vendas: count }))
     : [];
 
-  const salesByCourseData = report
-    ? Object.entries(report.salesByCourse)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
-        .map(([course, count]) => ({
-          course: course.length > 22 ? course.slice(0, 22) + "…" : course,
-          vendas: count,
-        }))
-    : [];
-
   const paymentData = report
     ? Object.entries(report.salesByPaymentMethod || {}).map(([method, count]) => ({
         method: paymentLabel[method] ?? method,
         vendas: count,
       }))
     : [];
+
+  const margin = report?.netMarginPercent ?? 0;
+  const marginColor =
+    margin >= 50 ? "text-green-600" : margin >= 30 ? "text-yellow-600" : "text-red-500";
 
   return (
     <div className="space-y-6">
@@ -199,8 +255,26 @@ const FinancialPage = () => {
       {/* Filtros */}
       <div className="border border-border rounded-xl p-4 bg-card space-y-3">
         <p className="text-sm font-medium text-foreground">Filtros</p>
+
+        {/* Atalhos */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { label: "7 dias",  days: 7  },
+            { label: "15 dias", days: 15 },
+            { label: "30 dias", days: 30 },
+            { label: "90 dias", days: 90 },
+          ].map(({ label, days }) => (
+            <button
+              key={days}
+              onClick={() => setPeriod(days)}
+              className="border border-border px-3 py-1 rounded-lg text-xs hover:bg-muted/50 transition"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex gap-3 items-center flex-wrap">
-          {/* Período */}
           <div className="flex gap-2 items-center">
             <input
               type="date"
@@ -217,7 +291,6 @@ const FinancialPage = () => {
             />
           </div>
 
-          {/* Filtro por curso */}
           <select
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
@@ -248,7 +321,7 @@ const FinancialPage = () => {
 
         {applied.product && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
-            Exibindo resultados filtrados por: <strong>{applied.product}</strong>
+            Filtrando por: <strong>{applied.product}</strong>
           </div>
         )}
       </div>
@@ -267,7 +340,7 @@ const FinancialPage = () => {
       {/* Loading */}
       {isLoading && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
@@ -275,31 +348,63 @@ const FinancialPage = () => {
 
       {report && (
         <>
-          {/* Cards de resumo */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* ── Cards de resumo ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard
-              label="Receita líquida"
-              value={fmt(report.netRevenue)}
-              color="text-green-600"
+              label="Receita bruta"
+              value={fmt(report.totalRevenue)}
+              sub={`${report.totalSales} venda${report.totalSales !== 1 ? "s" : ""} aprovada${report.totalSales !== 1 ? "s" : ""}`}
             />
-            <StatCard label="Vendas aprovadas" value={String(report.totalSales)} />
             <StatCard
-              label="Ticket médio"
+              label="Taxa Kiwify (total)"
+              value={fmt(report.totalKiwifyFees ?? 0)}
+              color="text-red-500"
+              sub={`${report.totalRevenue > 0 ? Math.round(((report.totalKiwifyFees ?? 0) / report.totalRevenue) * 100) : 0}% do bruto`}
+            />
+            <StatCard
+              label="Líquido recebido"
+              value={fmt(report.totalNetCommission ?? 0)}
+              color="text-green-600"
+              sub="Após taxas Kiwify"
+              badge={
+                margin > 0
+                  ? { text: `${margin.toFixed(1)}% margem`, color: `${marginColor} bg-muted` }
+                  : undefined
+              }
+            />
+            <StatCard
+              label="Ticket médio bruto"
               value={fmt(report.avgTicket)}
+            />
+            <StatCard
+              label="Ticket médio líquido"
+              value={fmt(report.avgNetTicket ?? 0)}
+              color="text-green-600"
             />
             <StatCard
               label={`Reembolsos (${fmt(report.totalRefunded)})`}
               value={String(report.refundCount)}
-              color="text-destructive"
+              color={report.refundCount > 0 ? "text-destructive" : "text-foreground"}
             />
           </div>
 
-          {/* Ranking de cursos mais vendidos */}
+          {/* ── Barra bruto/líquido ── */}
+          {report.totalRevenue > 0 && (
+            <RevenueBar
+              gross={report.totalRevenue}
+              net={report.totalNetCommission ?? 0}
+              fees={report.totalKiwifyFees ?? 0}
+            />
+          )}
+
+          {/* ── Ranking de cursos ── */}
           {report.topCourses?.length > 0 && (
             <div className="border border-border rounded-xl bg-card overflow-hidden">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">🏆 Cursos mais vendidos</h3>
-                <span className="text-xs text-muted-foreground">{report.topCourses.length} produto{report.topCourses.length !== 1 ? "s" : ""}</span>
+                <span className="text-xs text-muted-foreground">
+                  {report.topCourses.length} produto{report.topCourses.length !== 1 ? "s" : ""}
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -308,75 +413,85 @@ const FinancialPage = () => {
                       <th className="px-4 py-3 w-6">#</th>
                       <th className="px-4 py-3">Produto</th>
                       <th className="px-4 py-3 text-right">Vendas</th>
-                      <th className="px-4 py-3 text-right">Receita</th>
+                      <th className="px-4 py-3 text-right">Bruto</th>
+                      <th className="px-4 py-3 text-right">Líquido</th>
+                      <th className="px-4 py-3 text-right">Margem</th>
                       <th className="px-4 py-3">Último comprador</th>
                       <th className="px-4 py-3">Data</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-white">
-                    {report.topCourses.map((c, i) => (
-                      <tr
-                        key={c.productName}
-                        className={`hover:bg-gray-50 ${applied.product === c.productName ? "bg-blue-50" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{i + 1}</td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => {
-                              setSelectedCourse(c.productName);
-                              setApplied((p) => ({ ...p, product: c.productName }));
-                            }}
-                            className="font-medium text-primary hover:underline text-left"
-                          >
-                            {c.productName}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold">{c.count}</td>
-                        <td className="px-4 py-3 text-right text-green-700 font-medium">
-                          {fmt(c.revenue)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {c.lastBuyerName ? (
-                            <div>
-                              <div className="font-medium text-gray-800">{c.lastBuyerName}</div>
-                              <div className="text-xs text-muted-foreground">{c.lastBuyerEmail}</div>
-                              {(c.lastBuyerCity || c.lastBuyerState) && (
-                                <div className="text-xs text-muted-foreground">
-                                  {[c.lastBuyerCity, c.lastBuyerState].filter(Boolean).join(" - ")}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {fmtDate(c.lastBuyerAt)}
-                        </td>
-                      </tr>
-                    ))}
+                    {report.topCourses.map((c, i) => {
+                      const m = c.revenue > 0 ? Math.round((c.netRevenue / c.revenue) * 100) : 0;
+                      return (
+                        <tr
+                          key={c.productName}
+                          className={`hover:bg-gray-50 ${applied.product === c.productName ? "bg-blue-50" : ""}`}
+                        >
+                          <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{i + 1}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => {
+                                setSelectedCourse(c.productName);
+                                setApplied((p) => ({ ...p, product: c.productName }));
+                              }}
+                              className="font-medium text-primary hover:underline text-left"
+                            >
+                              {c.productName}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold">{c.count}</td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">
+                            {fmt(c.revenue)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-green-700 font-medium">
+                            {fmt(c.netRevenue ?? 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              m >= 50 ? "bg-green-100 text-green-700"
+                              : m >= 30 ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-600"
+                            }`}>
+                              {m}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {c.lastBuyerName ? (
+                              <div>
+                                <div className="font-medium text-gray-800">{c.lastBuyerName}</div>
+                                <div className="text-xs text-muted-foreground">{c.lastBuyerEmail}</div>
+                                {(c.lastBuyerCity || c.lastBuyerState) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {[c.lastBuyerCity, c.lastBuyerState].filter(Boolean).join(" - ")}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {fmtDate(c.lastBuyerAt)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {/* Gráfico vendas por dia */}
+          {/* ── Gráfico vendas por dia ── */}
           {salesByDayData.length > 0 && (
             <div className="border border-border rounded-xl p-6 bg-card">
               <h3 className="font-semibold mb-4 text-foreground">Vendas por dia</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={salesByDayData}>
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v) => v.slice(5)}
-                  />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip
-                    formatter={(v) => [v, "Vendas"]}
-                    labelFormatter={(l) => `Dia: ${l}`}
-                  />
+                  <Tooltip formatter={(v) => [v, "Vendas"]} labelFormatter={(l) => `Dia: ${l}`} />
                   <Line
                     type="monotone"
                     dataKey="vendas"
@@ -389,38 +504,22 @@ const FinancialPage = () => {
             </div>
           )}
 
-          {/* Gráficos por produto e pagamento lado a lado */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {salesByCourseData.length > 0 && (
-              <div className="border border-border rounded-xl p-6 bg-card">
-                <h3 className="font-semibold mb-4 text-foreground">Vendas por produto</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={salesByCourseData}>
-                    <XAxis dataKey="course" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip formatter={(v) => [v, "Vendas"]} />
-                    <Bar dataKey="vendas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+          {/* ── Gráfico por método de pagamento ── */}
+          {paymentData.length > 0 && (
+            <div className="border border-border rounded-xl p-6 bg-card">
+              <h3 className="font-semibold mb-4 text-foreground">Meio de pagamento</h3>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={paymentData}>
+                  <XAxis dataKey="method" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip formatter={(v) => [v, "Vendas"]} />
+                  <Bar dataKey="vendas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-            {paymentData.length > 0 && (
-              <div className="border border-border rounded-xl p-6 bg-card">
-                <h3 className="font-semibold mb-4 text-foreground">Meio de pagamento</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={paymentData}>
-                    <XAxis dataKey="method" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip formatter={(v) => [v, "Vendas"]} />
-                    <Bar dataKey="vendas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          {/* Tabela de pedidos enriquecida */}
+          {/* ── Tabela de pedidos ── */}
           {report.orders.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden bg-card">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
@@ -434,47 +533,68 @@ const FinancialPage = () => {
                     <tr className="text-left text-xs font-semibold text-gray-600">
                       <th className="px-4 py-3">Data</th>
                       <th className="px-4 py-3">Cliente</th>
-                      <th className="px-4 py-3">Localidade</th>
                       <th className="px-4 py-3">Produto</th>
                       <th className="px-4 py-3">Pagamento</th>
-                      <th className="px-4 py-3 text-right">Valor</th>
+                      <th className="px-4 py-3 text-right">Bruto</th>
+                      <th className="px-4 py-3 text-right text-red-500">Taxa</th>
+                      <th className="px-4 py-3 text-right text-green-600">Líquido</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-white">
-                    {report.orders.slice(0, 50).map((o, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                          <div>{fmtDate(o.created_at)}</div>
-                          {o.order_ref && (
-                            <div className="text-xs font-mono text-muted-foreground">{o.order_ref}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{o.customer?.name || "—"}</div>
-                          <div className="text-xs text-muted-foreground">{o.customer?.email || ""}</div>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {[o.customer_city, o.customer_state].filter(Boolean).join(" - ") || "—"}
-                        </td>
-                        <td className="px-4 py-3">{o.product?.name || "—"}</td>
-                        <td className="px-4 py-3">
-                          <div className="text-xs">
-                            {paymentLabel[o.payment_method ?? ""] ?? o.payment_method ?? "—"}
-                          </div>
-                          {o.card_type && (
-                            <div className="text-xs text-muted-foreground">
-                              {o.card_type}
-                              {o.card_last4 ? ` ****${o.card_last4}` : ""}
-                              {(o.installments ?? 1) > 1 ? ` · ${o.installments}x` : ""}
+                    {report.orders.slice(0, 50).map((o, i) => {
+                      const gross  = o.product_price ?? 0;
+                      const fee    = o.kiwify_fee_cents ?? 0;
+                      const net    = o.my_commission_cents ?? 0;
+                      const hasNet = net > 0;
+                      return (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                            <div>{fmtDate(o.created_at)}</div>
+                            {o.order_ref && (
+                              <div className="text-xs font-mono text-muted-foreground">{o.order_ref}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{o.customer?.name || "—"}</div>
+                            <div className="text-xs text-muted-foreground">{o.customer?.email || ""}</div>
+                          </td>
+                          <td className="px-4 py-3">{o.product?.name || "—"}</td>
+                          <td className="px-4 py-3">
+                            <div className="text-xs">
+                              {paymentLabel[o.payment_method ?? ""] ?? o.payment_method ?? "—"}
                             </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">
-                          {fmt(o.product_price / 100)}
-                        </td>
-                      </tr>
-                    ))}
+                            {o.card_type && (
+                              <div className="text-xs text-muted-foreground">
+                                {o.card_type}
+                                {o.card_last4 ? ` ****${o.card_last4}` : ""}
+                                {(o.installments ?? 1) > 1 ? ` · ${o.installments}x` : ""}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">
+                            {fmt(gross / 100)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-500 text-xs">
+                            {fee > 0 ? `- ${fmt(fee / 100)}` : "—"}
+                          </td>
+                          <td className={`px-4 py-3 text-right font-semibold ${hasNet ? "text-green-700" : "text-muted-foreground"}`}>
+                            {hasNet ? fmt(net / 100) : fmt(gross / 100)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
+                  {/* Totais */}
+                  {report.orders.length > 0 && (
+                    <tfoot className="bg-gray-50 border-t border-border">
+                      <tr className="text-xs font-semibold text-gray-700">
+                        <td colSpan={4} className="px-4 py-3">Total</td>
+                        <td className="px-4 py-3 text-right">{fmt(report.totalRevenue)}</td>
+                        <td className="px-4 py-3 text-right text-red-500">- {fmt(report.totalKiwifyFees ?? 0)}</td>
+                        <td className="px-4 py-3 text-right text-green-700">{fmt(report.totalNetCommission ?? 0)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
                 {report.orders.length > 50 && (
                   <p className="px-4 py-3 text-xs text-muted-foreground border-t border-border">
