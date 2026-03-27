@@ -84,7 +84,7 @@ const CoursesPage = () => {
           {courses.map((c) => (
             <div key={c.id} className="bg-card border border-border rounded-lg overflow-hidden transition-fast hover:shadow-md">
               {c.thumbnail && (
-                <div className="h-32 bg-secondary overflow-hidden">
+              <div className="aspect-video bg-secondary overflow-hidden">
                   <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
                 </div>
               )}
