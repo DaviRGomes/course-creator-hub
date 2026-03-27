@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import ModuleSidebar from "@/components/ModuleSidebar";
 
 const QuizPage = () => {
   const { slug, moduleId, quizId } = useParams();

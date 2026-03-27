@@ -216,94 +216,14 @@ const LessonPlayerPage = () => {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold text-sm text-foreground">Conteúdo do módulo</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {sequence.map((item: any) => {
-              const isCurrent = item.type === "VIDEO" && String(item.id) === lessonId;
-              const done = item.status === "COMPLETED" || (isCurrent && completed);
-              const locked = item.status === "LOCKED";
-
-              return (
-                <button
-                  key={`${item.type}-${item.id}`}
-                  disabled={locked}
-                  onClick={() => {
-                    if (locked) {
-                      toast.error("Conclua o item anterior para desbloquear.");
-                      return;
-                    }
-                    if (item.type === "VIDEO") {
-                      navigate(`/learn/${slug}/modules/${moduleId}/lesson/${item.id}`);
-                    } else {
-                      navigate(`/learn/${slug}/modules/${moduleId}/quiz/${item.id}`);
-                    }
-                  }}
-                  className={cn(
-                    "w-full text-left px-4 py-3 flex items-center gap-3 transition-fast",
-                    isCurrent && "bg-primary/5 border-l-2 border-l-primary",
-                    locked ? "opacity-40 cursor-not-allowed" : "hover:bg-accent/50"
-                  )}
-                >
-                  <div className="flex-shrink-0 w-5 text-center">
-                    {done ? (
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    ) : locked ? (
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-border" />
-                    )}
-                  </div>
-                  <div className="flex-shrink-0">
-                    {item.type === "VIDEO" ? (
-                      <PlayCircle className="h-4 w-4 text-primary" />
-                    ) : (
-                      <FileQuestion className="h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm truncate",
-                      isCurrent ? "text-primary font-medium" : locked ? "text-muted-foreground" : "text-foreground"
-                    )}>
-                      {item.title}
-                    </p>
-                  </div>
-                  {item.type === "VIDEO" && item.duration > 0 && (
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{formatDuration(item.duration)}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {materials.length > 0 && (
-            <div className="border-t border-border px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                📁 Materiais de Apoio
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {materials.map((m: any) => (
-                  <a
-                    key={m.id}
-                    href={m.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
-                  >
-                    {m.type === "PDF" && "📄"}
-                    {m.type === "IMAGE" && "🖼️"}
-                    {m.type === "LINK" && "🔗"}
-                    {m.type === "VIDEO_EXTRA" && "🎬"}
-                    {m.title}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ModuleSidebar
+          courseId={courseId}
+          moduleId={moduleId!}
+          slug={slug!}
+          currentId={lessonId}
+          currentType="VIDEO"
+          completed={completed}
+        />
       </div>
     </div>
   );
