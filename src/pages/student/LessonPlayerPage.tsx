@@ -10,6 +10,9 @@ import { useState, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import ModuleSidebar from "@/components/ModuleSidebar";
 
+const isMobileDevice = () =>
+  typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
@@ -137,6 +140,33 @@ const LessonPlayerPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {currentVideo.muxPlaybackId && currentVideo.muxStatus === "ready" ? (
+            isMobileDevice() ? (
+              <video
+                ref={playerRef}
+                controls
+                playsInline
+                className="w-full rounded-xl overflow-hidden"
+                style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={() => {
+                  handleMarkWatched();
+                  const idx = videos.findIndex((v) => String(v.id) === lessonId);
+                  const next = videos[idx + 1];
+                  if (next) {
+                    setTimeout(() => {
+                      navigate(`/learn/${slug}/modules/${moduleId}/lesson/${next.id}`);
+                    }, 2000);
+                  } else {
+                    setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
+                  }
+                }}
+              >
+                <source
+                  src={`https://stream.mux.com/${currentVideo.muxPlaybackId}.m3u8`}
+                  type="application/x-mpegURL"
+                />
+              </video>
+            ) : (
             <MuxPlayer
               ref={playerRef}
               playbackId={currentVideo.muxPlaybackId}
@@ -159,6 +189,7 @@ const LessonPlayerPage = () => {
               }}
               accentColor="#6366f1"
             />
+            )
           ) : currentVideo.muxStatus === "preparing" ? (
             <div className="w-full aspect-video rounded-xl bg-foreground/5 border border-border flex items-center justify-center">
               <div className="text-center">
