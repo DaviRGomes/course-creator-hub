@@ -145,6 +145,7 @@ const LessonPlayerPage = () => {
                 ref={playerRef}
                 controls
                 playsInline
+                src={`https://stream.mux.com/${currentVideo.muxPlaybackId}.m3u8`}
                 className="w-full rounded-xl overflow-hidden"
                 style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
                 onTimeUpdate={handleTimeUpdate}
@@ -160,12 +161,7 @@ const LessonPlayerPage = () => {
                     setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
                   }
                 }}
-              >
-                <source
-                  src={`https://stream.mux.com/${currentVideo.muxPlaybackId}.m3u8`}
-                  type="application/x-mpegURL"
-                />
-              </video>
+              />
             ) : (
             <MuxPlayer
               ref={playerRef}
