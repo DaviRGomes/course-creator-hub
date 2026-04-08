@@ -141,6 +141,7 @@ const LessonPlayerPage = () => {
               ref={playerRef}
               playbackId={currentVideo.muxPlaybackId}
               streamType="on-demand"
+              preferPlayback="native"
               className="w-full rounded-xl overflow-hidden"
               style={{ aspectRatio: "16/9" }}
               onTimeUpdate={handleTimeUpdate}
