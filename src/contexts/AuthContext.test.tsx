@@ -82,34 +82,26 @@ describe("AuthContext Phase 7", () => {
     });
     vi.spyOn(api, "get").mockReturnValueOnce(deferred as Promise<unknown>);
 
-    const { queryByTestId, findByTestId } = render(
-      <AuthProvider>
-        <div data-testid="child">hello</div>
-      </AuthProvider>
-    );
-
-    // Before resolution: children should not be visible (spinner is shown by ProtectedRoute,
-    // but AuthProvider itself renders children — check isLoading state instead via a consumer)
-    // The spinner is shown in ProtectedRoute, not directly in AuthProvider.
-    // Here we verify that before /auth/me resolves, isLoading would be true.
-    // Since AuthProvider renders children regardless, we test via a loading consumer.
     const LoadingConsumer = () => {
       const { isLoading } = useAuth();
       return <div data-testid="loading">{isLoading ? "loading" : "done"}</div>;
     };
 
-    const { findByTestId: findLoading } = render(
+    const { findByTestId } = render(
       <AuthProvider>
         <LoadingConsumer />
       </AuthProvider>
     );
 
-    // Resolve the promise and wait
+    // Before resolution: isLoading should be true
+    const loadingEl = await findByTestId("loading");
+    expect(loadingEl.textContent).toBe("loading");
+
+    // Resolve the promise and wait for isLoading to become false
     await act(async () => {
       resolve!({ data: { data: { name: "T", email: "t@t.com", role: "ADMIN" } } });
     });
 
-    const loadingEl = await findLoading("loading");
-    expect(loadingEl.textContent).toBe("done");
+    await waitFor(() => expect(loadingEl.textContent).toBe("done"));
   });
 });

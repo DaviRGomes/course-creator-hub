@@ -1,17 +1,18 @@
-import React, { createContext, useContext, useState, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import api from "@/lib/api";
 
 interface AuthState {
-  token: string | null;
   email: string | null;
   name: string | null;
   role: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
-interface AuthContextType extends AuthState {
+interface AuthContextType extends Omit<AuthState, 'isLoading'> {
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<string>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -24,40 +25,82 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<AuthState>(() => {
-    const token = localStorage.getItem("auth_token");
-    return {
-      token,
-      email: localStorage.getItem("auth_email"),
-      name: localStorage.getItem("admin_name"),
-      role: localStorage.getItem("auth_role"),
-      isAuthenticated: !!token,
-    };
+  const [state, setState] = useState<AuthState>({
+    email: null,
+    name: null,
+    role: null,
+    isAuthenticated: false,
+    isLoading: true, // Start loading — wait for /auth/me (D-03)
   });
+
+  // Init: check session via cookie (D-03)
+  useEffect(() => {
+    api.get("/auth/me")
+      .then((res) => {
+        const { name, email, role } = res.data.data;
+        setState({
+          email,
+          name: name || null,
+          role,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      })
+      .catch(() => {
+        setState({
+          email: null,
+          name: null,
+          role: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      });
+  }, []);
 
   const login = async (email: string, password: string): Promise<string> => {
     const res = await api.post("/auth/login", { email, password });
-    const { token, name, role } = res.data.data;
-    localStorage.setItem("auth_token", token);
-    localStorage.setItem("auth_email", email);
-    localStorage.setItem("admin_name", name || "");
-    localStorage.setItem("auth_role", role);
-    setState({ token, email, name: name || null, role, isAuthenticated: true });
+    // D-02: response body has {name, email, role} — no token field
+    const { name, role } = res.data.data;
+    setState({
+      email,
+      name: name || null,
+      role,
+      isAuthenticated: true,
+      isLoading: false,
+    });
     return role;
   };
 
-  const logout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_email");
-    localStorage.removeItem("admin_name");
-    localStorage.removeItem("auth_role");
-    setState({ token: null, email: null, name: null, role: null, isAuthenticated: false });
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Network error during logout — proceed with client-side cleanup anyway
+    }
+    setState({
+      email: null,
+      name: null,
+      role: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
   };
 
   const isAdmin = state.role === "ADMIN";
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, isAdmin }}>
+    <AuthContext.Provider
+      value={{
+        email: state.email,
+        name: state.name,
+        role: state.role,
+        isAuthenticated: state.isAuthenticated,
+        isLoading: state.isLoading,
+        login,
+        logout,
+        isAdmin,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
