@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, ShoppingCart, Lock } from "lucide-react";
 
 interface CertificateSettings {
   platformName: string;
@@ -40,10 +40,19 @@ const CertificatePage = () => {
 
   const accent = settings.primaryColor || "#22c55e";
 
-  const { data: course, isLoading } = useQuery({
+  const { data: course, isLoading: loadingCourse } = useQuery({
     queryKey: ["course", courseId],
     queryFn: () => api.get(`/courses/${courseId}`).then((r) => r.data.data ?? r.data),
   });
+
+  const { data: certStatus, isLoading: loadingStatus } = useQuery({
+    queryKey: ["cert-status", courseId],
+    queryFn: () =>
+      api.get(`/student/courses/${courseId}/certificate-status`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
+  });
+
+  const isLoading = loadingCourse || loadingStatus;
 
   const studentName = name || email?.split("@")[0] || "Aluno";
   const initial = studentName.charAt(0).toUpperCase();
@@ -67,6 +76,45 @@ const CertificatePage = () => {
       <div className="text-center py-20">
         <p className="text-muted-foreground">Certificado não disponível.</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/dashboard")}>
+          Voltar ao painel
+        </Button>
+      </div>
+    );
+  }
+
+  // Gate: certificação paga obrigatória e ainda não paga
+  if (certStatus?.certificationRequired && !certStatus?.certificationPaid) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-20 space-y-6">
+        <div className="flex justify-center">
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+            <Lock className="h-10 w-10 text-muted-foreground" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">Certificado bloqueado</h2>
+          <p className="text-muted-foreground">
+            Para emitir o certificado de{" "}
+            <span className="font-medium text-foreground">{course.title}</span>, é necessário
+            adquirir a certificação.
+          </p>
+        </div>
+        {certStatus?.purchaseUrl ? (
+          <Button
+            size="lg"
+            className="gap-2"
+            style={{ backgroundColor: accent, borderColor: accent, color: "#fff" }}
+            onClick={() => window.open(certStatus.purchaseUrl, "_blank")}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Comprar Certificação
+          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Entre em contato com o suporte para adquirir a certificação.
+          </p>
+        )}
+        <Button variant="ghost" onClick={() => navigate("/dashboard")}>
           Voltar ao painel
         </Button>
       </div>

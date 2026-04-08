@@ -34,6 +34,8 @@ interface Course {
   thumbnail: string;
   active: boolean;
   modulesCount?: number;
+  certificationKiwifyProductId?: string;
+  certificationPurchaseUrl?: string;
 }
 
 const CourseDetailPage = () => {
@@ -42,7 +44,7 @@ const CourseDetailPage = () => {
   const qc = useQueryClient();
 
   const [editingCourse, setEditingCourse] = useState(false);
-  const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnail: "", active: true });
+  const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnail: "", active: true, certificationKiwifyProductId: "", certificationPurchaseUrl: "" });
   const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -102,7 +104,7 @@ const CourseDetailPage = () => {
 
   const startEditCourse = () => {
     if (course) {
-      setCourseForm({ title: course.title ?? "", description: course.description ?? "", thumbnail: course.thumbnail ?? "", active: course.active ?? true });
+      setCourseForm({ title: course.title ?? "", description: course.description ?? "", thumbnail: course.thumbnail ?? "", active: course.active ?? true, certificationKiwifyProductId: course.certificationKiwifyProductId ?? "", certificationPurchaseUrl: course.certificationPurchaseUrl ?? "" });
       setEditingCourse(true);
     }
   };
@@ -147,6 +149,28 @@ const CourseDetailPage = () => {
             <div className="space-y-2">
               <Label>Descrição</Label>
               <Textarea value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} rows={3} />
+            </div>
+            <div className="space-y-2">
+              <Label>Product ID de Certificação (Kiwify)</Label>
+              <Input
+                value={courseForm.certificationKiwifyProductId}
+                onChange={(e) => setCourseForm({ ...courseForm, certificationKiwifyProductId: e.target.value })}
+                placeholder="Deixe vazio para certificação gratuita"
+              />
+              <p className="text-xs text-muted-foreground">
+                ID do produto no Kiwify. Quando preenchido, o aluno só emite o certificado após comprar.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Link de compra da certificação</Label>
+              <Input
+                value={courseForm.certificationPurchaseUrl}
+                onChange={(e) => setCourseForm({ ...courseForm, certificationPurchaseUrl: e.target.value })}
+                placeholder="https://pay.kiwify.com.br/..."
+              />
+              <p className="text-xs text-muted-foreground">
+                URL de checkout Kiwify. Nome e email do aluno são adicionados automaticamente como query params.
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={courseForm.active} onCheckedChange={(v) => setCourseForm({ ...courseForm, active: v })} />
