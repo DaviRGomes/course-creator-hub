@@ -1,25 +1,35 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import api from "@/lib/api";
 
 /**
- * Wave 0 stubs for Phase 7 — api.ts Axios configuration.
- * All tests are inside describe.skip and will be enabled in Plan 04.
- *
+ * Phase 7 — api.ts Axios configuration tests.
  * Covers VALIDATION.md task IDs:
  *   07-03-03  api.ts sends withCredentials: true
  *
- * TODO: enable after Plan 04 implementation
+ * Enabled in Plan 04.
  */
 
-// eslint-disable-next-line vitest/no-disabled-tests
-describe.skip("api.ts Phase 7", () => {
+describe("api.ts Phase 7", () => {
 
   // ── 07-03-03 ──────────────────────────────────────────────────────────────
 
   it("has withCredentials: true in axios defaults", () => {
-    // TODO: enable after Plan 04 implementation
-    //
-    // import api from "@/lib/api";
-    //
-    // expect(api.defaults.withCredentials).toBe(true);
+    expect(api.defaults.withCredentials).toBe(true);
+  });
+
+  it("has no request interceptor that reads localStorage", () => {
+    const spy = vi.spyOn(Storage.prototype, "getItem");
+    // Trigger interceptors without actually making a request
+    const config = { headers: {} as Record<string, string> };
+    // Access interceptor handlers directly
+    // @ts-ignore — accessing internal axios structure
+    const handlers = (api.interceptors.request as any).handlers;
+    handlers.forEach((handler: any) => {
+      if (handler && handler.fulfilled) {
+        handler.fulfilled(config);
+      }
+    });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
