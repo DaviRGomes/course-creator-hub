@@ -8,22 +8,25 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AdminLayout from "@/components/AdminLayout";
 import StudentLayout from "@/components/StudentLayout";
 import Login from "@/pages/Login";
-import UsersPage from "@/pages/UsersPage";
-import CoursesPage from "@/pages/CoursesPage";
-import CourseDetailPage from "@/pages/CourseDetailPage";
-import ModuleDetailPage from "@/pages/ModuleDetailPage";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import ProfilePage from "@/pages/student/ProfilePage";
 import CourseOverviewPage from "@/pages/student/CourseOverviewPage";
 import LessonPlayerPage from "@/pages/student/LessonPlayerPage";
 import QuizPage from "@/pages/student/QuizPage";
 import CertificatePage from "@/pages/student/CertificatePage";
-import CertificateSettingsPage from "@/pages/CertificateSettingsPage";
-import CertificatesPage from "@/pages/CertificatesPage";
-import DashboardPage from "@/pages/DashboardPage";
-import IntegrationsPage from "@/pages/IntegrationsPage";
-import FinancialPage from "@/pages/FinancialPage";
 import NotFound from "./pages/NotFound";
+import { lazy, Suspense } from "react";
+
+// Admin pages — lazy loaded para não expor código no bundle principal
+const UsersPage = lazy(() => import("@/pages/UsersPage"));
+const CoursesPage = lazy(() => import("@/pages/CoursesPage"));
+const CourseDetailPage = lazy(() => import("@/pages/CourseDetailPage"));
+const ModuleDetailPage = lazy(() => import("@/pages/ModuleDetailPage"));
+const CertificateSettingsPage = lazy(() => import("@/pages/CertificateSettingsPage"));
+const CertificatesPage = lazy(() => import("@/pages/CertificatesPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const IntegrationsPage = lazy(() => import("@/pages/IntegrationsPage"));
+const FinancialPage = lazy(() => import("@/pages/FinancialPage"));
 
 const queryClient = new QueryClient();
 
@@ -48,8 +51,8 @@ const App = () => (
               <Route path="learn/:slug/modules/:moduleId/quiz/:quizId" element={<QuizPage />} />
             </Route>
 
-            {/* Admin routes */}
-            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
+            {/* Admin routes — lazy loaded: JS só é baixado após autenticação admin */}
+            <Route path="/admin" element={<ProtectedRoute adminOnly><Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}><AdminLayout /></Suspense></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="users" element={<UsersPage />} />
