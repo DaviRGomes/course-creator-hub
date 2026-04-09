@@ -71,8 +71,8 @@ const LessonPlayerPage = () => {
   };
 
   const watchMut = useMutation({
-    mutationFn: () =>
-      api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`).then(() => {}),
+    mutationFn: (data: { watchedSeconds: number; totalSeconds: number }) =>
+      api.post(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/watch`, data).then(() => {}),
     onSuccess: () => {
       setCompleted(true);
       toast.success("Aula marcada como concluída! Continue assistindo.");
@@ -91,8 +91,13 @@ const LessonPlayerPage = () => {
 
   const handleMarkWatched = () => {
     if (completed || autoMarked.current || watchMut.isPending) return;
+    const player = playerRef.current;
+    if (!player || !player.duration) return;
     autoMarked.current = true;
-    watchMut.mutate();
+    watchMut.mutate({
+      watchedSeconds: Math.floor(player.currentTime),
+      totalSeconds: Math.floor(player.duration),
+    });
   };
 
   const handleTimeUpdate = () => {
