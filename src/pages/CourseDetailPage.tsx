@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Eye, ChevronLeft, Layers, Loader2, Save, BookOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronLeft, Layers, Loader2, Save, BookOpen, Link2 } from "lucide-react";
 import { CourseEnrollments } from "@/components/CourseEnrollments";
 
 interface Module {
@@ -47,6 +47,11 @@ const CourseDetailPage = () => {
   const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnail: "", active: true, certificationKiwifyProductId: "", certificationPurchaseUrl: "" });
   const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
 
+  // Product mapping (Kiwify)
+  const [productName, setProductName] = useState("");
+  const [productNameSaved, setProductNameSaved] = useState("");
+  const [savingMapping, setSavingMapping] = useState(false);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Module | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -61,6 +66,37 @@ const CourseDetailPage = () => {
     queryKey: ["modules", id],
     queryFn: () => api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data),
   });
+
+  // Fetch product mapping for this course
+  const { data: mappings } = useQuery<{ id: number; productName: string; courseId: number; courseTitle: string }[]>({
+    queryKey: ["product-mapping"],
+    queryFn: () => api.get("/admin/integrations/product-mapping").then((r) => r.data.data ?? []),
+  });
+
+  useEffect(() => {
+    if (mappings && id) {
+      const existing = mappings.find((m) => String(m.courseId) === id);
+      const name = existing?.productName ?? "";
+      setProductName(name);
+      setProductNameSaved(name);
+    }
+  }, [mappings, id]);
+
+  const saveProductMapping = async () => {
+    setSavingMapping(true);
+    try {
+      await api.put(`/admin/integrations/product-mapping/course/${id}`, {
+        productName: productName.trim(),
+      });
+      await qc.invalidateQueries({ queryKey: ["product-mapping"] });
+      setProductNameSaved(productName.trim());
+      toast.success(productName.trim() ? `Produto "${productName.trim()}" vinculado!` : "Vínculo removido.");
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Erro ao salvar mapeamento");
+    } finally {
+      setSavingMapping(false);
+    }
+  };
 
   const updateCourseMut = useMutation({
     mutationFn: () => api.put(`/courses/${id}`, courseForm).then(() => {}),
@@ -217,6 +253,41 @@ const CourseDetailPage = () => {
               </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Integração Kiwify — Produto → Curso */}
+      <div className="bg-card rounded-lg border border-border p-6 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Link2 className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">Integração Kiwify</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Nome exato do produto na Kiwify que libera matrícula automática neste curso. Deixe vazio para desativar.
+        </p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 space-y-1">
+            <Label>Nome do produto na Kiwify</Label>
+            <Input
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && productName !== productNameSaved && saveProductMapping()}
+              placeholder="Ex: Conexões Sociais PRO"
+            />
+          </div>
+          <Button
+            onClick={saveProductMapping}
+            disabled={savingMapping || productName === productNameSaved}
+            size="sm"
+          >
+            {savingMapping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
+          </Button>
+        </div>
+        {productNameSaved && (
+          <p className="text-xs text-green-600 mt-2">
+            Vinculado ao produto: <strong>{productNameSaved}</strong>
+          </p>
         )}
       </div>
 

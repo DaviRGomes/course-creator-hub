@@ -25,7 +25,6 @@ const ModuleDetailPage = lazy(() => import("@/pages/ModuleDetailPage"));
 const CertificateSettingsPage = lazy(() => import("@/pages/CertificateSettingsPage"));
 const CertificatesPage = lazy(() => import("@/pages/CertificatesPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const IntegrationsPage = lazy(() => import("@/pages/IntegrationsPage"));
 const FinancialPage = lazy(() => import("@/pages/FinancialPage"));
 
 const queryClient = new QueryClient();
@@ -61,7 +60,6 @@ const App = () => (
               <Route path="courses/:id/modules/:moduleId" element={<ModuleDetailPage />} />
               <Route path="certificate-settings" element={<CertificateSettingsPage />} />
               <Route path="certificates" element={<CertificatesPage />} />
-              <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="financial" element={<FinancialPage />} />
             </Route>
 
