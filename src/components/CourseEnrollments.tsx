@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, Users, Loader2 } from "lucide-react";
 
 interface Enrollment {
   id: string;
@@ -29,9 +29,7 @@ export const CourseEnrollments = ({ courseId }: Props) => {
   const qc = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
-  const [searchEmail, setSearchEmail] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", password: "" });
 
   const { data: enrollments = [], isLoading } = useQuery<Enrollment[]>({
     queryKey: ["enrollments", courseId],
@@ -42,17 +40,25 @@ export const CourseEnrollments = ({ courseId }: Props) => {
       }),
   });
 
-  const addMut = useMutation({
-    mutationFn: (userId: string) =>
-      api.post(`/courses/${courseId}/enrollments`, { userId }).then(() => {}),
+  const createAndEnrollMut = useMutation({
+    mutationFn: async () => {
+      const r = await api.post(`/admin/users`, {
+        name: createForm.name,
+        email: createForm.email,
+        password: createForm.password,
+      });
+      const userId = r.data?.data?.id ?? r.data?.id;
+      if (userId) {
+        await api.post(`/courses/${courseId}/enrollments`, { userId });
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["enrollments", courseId] });
       setAddModalOpen(false);
-      setSearchEmail("");
-      setSearchResults([]);
-      toast.success("Aluno adicionado ao curso");
+      setCreateForm({ name: "", email: "", password: "" });
+      toast.success("Aluno criado e matriculado no curso");
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao adicionar aluno"),
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao criar aluno"),
   });
 
   const removeMut = useMutation({
@@ -65,22 +71,6 @@ export const CourseEnrollments = ({ courseId }: Props) => {
     },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao remover aluno"),
   });
-
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) return;
-    setSearching(true);
-    try {
-      const r = await api.get(`/admin/users`, { params: { search: searchEmail } });
-      const payload = r.data.data ?? r.data;
-      const results = Array.isArray(payload) ? payload : (payload.content ?? []);
-      const enrolledIds = new Set(enrollments.map((e) => e.userId));
-      setSearchResults(results.filter((u: any) => !enrolledIds.has(u.id)));
-    } catch {
-      toast.error("Erro ao buscar usuários");
-    } finally {
-      setSearching(false);
-    }
-  };
 
   return (
     <>
@@ -155,61 +145,31 @@ export const CourseEnrollments = ({ courseId }: Props) => {
       )}
 
       {/* Add student modal */}
-      <Dialog open={addModalOpen} onOpenChange={(o) => { setAddModalOpen(o); if (!o) { setSearchEmail(""); setSearchResults([]); } }}>
+      <Dialog open={addModalOpen} onOpenChange={(o) => { setAddModalOpen(o); if (!o) setCreateForm({ name: "", email: "", password: "" }); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar Aluno ao Curso</DialogTitle>
+            <DialogTitle>Criar e Matricular Aluno</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); createAndEnrollMut.mutate(); }} className="space-y-4">
             <div className="space-y-2">
-              <Label>Buscar por nome ou email</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={searchEmail}
-                  onChange={(e) => setSearchEmail(e.target.value)}
-                  placeholder="Digite o nome ou email..."
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSearch())}
-                />
-                <Button type="button" variant="outline" onClick={handleSearch} disabled={searching}>
-                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Label>Nome</Label>
+              <Input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} required />
             </div>
-
-            {searchResults.length > 0 && (
-              <div className="border border-border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {searchResults.map((u: any) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">{u.name || u.userName || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
-                        <TableCell className="w-24">
-                          <Button
-                            size="sm"
-                            disabled={addMut.isPending}
-                            onClick={() => addMut.mutate(u.id)}
-                          >
-                            {addMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                            Adicionar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {searchResults.length === 0 && searchEmail && !searching && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum usuário encontrado. Tente outro termo.
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddModalOpen(false)}>Fechar</Button>
-          </DialogFooter>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setAddModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={createAndEnrollMut.isPending}>
+                {createAndEnrollMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Criar Aluno
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
