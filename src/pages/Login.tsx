@@ -44,7 +44,7 @@ const Login = () => {
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
           <LogoIcon className="w-28 h-28 mb-6" />
-          <h1 className="text-xl font-semibold text-foreground">
+          <h1 className="text-xl font-semibold text-white">
             Conexões <span className="text-primary">Sociais</span>
           </h1>
           <div className="w-24 h-1 bg-primary rounded-full mb-8" />
