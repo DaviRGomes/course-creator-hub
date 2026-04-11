@@ -29,9 +29,7 @@ export const CourseEnrollments = ({ courseId }: Props) => {
   const qc = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
-  const [searchEmail, setSearchEmail] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", password: "" });
 
   const { data: enrollments = [], isLoading } = useQuery<Enrollment[]>({
     queryKey: ["enrollments", courseId],
