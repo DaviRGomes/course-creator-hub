@@ -251,7 +251,7 @@ const UsersPage = () => {
                     <SelectValue placeholder="Selecionar curso" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {courses.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
                     ))}
