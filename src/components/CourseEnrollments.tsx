@@ -145,61 +145,31 @@ export const CourseEnrollments = ({ courseId }: Props) => {
       )}
 
       {/* Add student modal */}
-      <Dialog open={addModalOpen} onOpenChange={(o) => { setAddModalOpen(o); if (!o) { setSearchEmail(""); setSearchResults([]); } }}>
+      <Dialog open={addModalOpen} onOpenChange={(o) => { setAddModalOpen(o); if (!o) setCreateForm({ name: "", email: "", password: "" }); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar Aluno ao Curso</DialogTitle>
+            <DialogTitle>Criar e Matricular Aluno</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); createAndEnrollMut.mutate(); }} className="space-y-4">
             <div className="space-y-2">
-              <Label>Buscar por nome ou email</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={searchEmail}
-                  onChange={(e) => setSearchEmail(e.target.value)}
-                  placeholder="Digite o nome ou email..."
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSearch())}
-                />
-                <Button type="button" variant="outline" onClick={handleSearch} disabled={searching}>
-                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Label>Nome</Label>
+              <Input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} required />
             </div>
-
-            {searchResults.length > 0 && (
-              <div className="border border-border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {searchResults.map((u: any) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">{u.name || u.userName || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
-                        <TableCell className="w-24">
-                          <Button
-                            size="sm"
-                            disabled={addMut.isPending}
-                            onClick={() => addMut.mutate(u.id)}
-                          >
-                            {addMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                            Adicionar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {searchResults.length === 0 && searchEmail && !searching && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum usuário encontrado. Tente outro termo.
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddModalOpen(false)}>Fechar</Button>
-          </DialogFooter>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setAddModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={createAndEnrollMut.isPending}>
+                {createAndEnrollMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Criar Aluno
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
