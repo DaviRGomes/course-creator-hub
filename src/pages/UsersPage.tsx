@@ -59,7 +59,7 @@ const UsersPage = () => {
         name: form.name,
         email: form.email,
         password: form.password || null,
-        courseId: form.courseId ? Number(form.courseId) : null,
+        courseId: form.courseId && form.courseId !== "__none__" ? Number(form.courseId) : null,
       }).then((r) => r.data.data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["users"] });
