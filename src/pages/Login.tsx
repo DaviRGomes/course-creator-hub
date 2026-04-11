@@ -44,12 +44,9 @@ const Login = () => {
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
           <LogoIcon className="w-28 h-28 mb-6" />
-          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
-            Conexões
+          <h1 className="text-xl font-semibold text-white">
+            Conexões <span className="text-primary">Sociais</span>
           </h1>
-          <h2 className="text-4xl font-bold text-primary mb-8">
-            Sociais
-          </h2>
           <div className="w-24 h-1 bg-primary rounded-full mb-8" />
           <p className="text-sidebar-foreground text-sm uppercase tracking-[0.25em]">
             Onde sua transformação acontece
