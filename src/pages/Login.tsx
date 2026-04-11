@@ -34,7 +34,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-sidebar-background relative flex-col items-center justify-center p-12 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[hsl(222,47%,11%)] relative flex-col items-center justify-center p-12 overflow-hidden">
         {/* Decorative gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5" />
         
@@ -44,11 +44,11 @@ const Login = () => {
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
           <LogoIcon className="w-28 h-28 mb-6" />
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-xl font-semibold text-foreground">
             Conexões <span className="text-primary">Sociais</span>
           </h1>
           <div className="w-24 h-1 bg-primary rounded-full mb-8" />
-          <p className="text-sidebar-foreground text-sm uppercase tracking-[0.25em]">
+          <p className="text-gray-400 text-sm uppercase tracking-[0.25em]">
             Onde sua transformação acontece
           </p>
         </div>
