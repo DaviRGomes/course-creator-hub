@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, Users, Loader2 } from "lucide-react";
 
 interface Enrollment {
   id: string;
