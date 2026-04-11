@@ -54,10 +54,10 @@ const Login = () => {
         </div>
 
         <div className="absolute bottom-8 text-center z-10">
-          <p className="text-sidebar-foreground/60 text-xs">
+          <p className="text-gray-500 text-xs">
             Feito com ♡ para você
           </p>
-          <p className="text-sidebar-foreground/40 text-xs mt-1">
+          <p className="text-gray-600 text-xs mt-1">
             Copyright © {new Date().getFullYear()} — Conexões Sociais. Todos os direitos reservados.
           </p>
         </div>
