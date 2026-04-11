@@ -40,17 +40,25 @@ export const CourseEnrollments = ({ courseId }: Props) => {
       }),
   });
 
-  const addMut = useMutation({
-    mutationFn: (userId: string) =>
-      api.post(`/courses/${courseId}/enrollments`, { userId }).then(() => {}),
+  const createAndEnrollMut = useMutation({
+    mutationFn: async () => {
+      const r = await api.post(`/admin/users`, {
+        name: createForm.name,
+        email: createForm.email,
+        password: createForm.password,
+      });
+      const userId = r.data?.data?.id ?? r.data?.id;
+      if (userId) {
+        await api.post(`/courses/${courseId}/enrollments`, { userId });
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["enrollments", courseId] });
       setAddModalOpen(false);
-      setSearchEmail("");
-      setSearchResults([]);
-      toast.success("Aluno adicionado ao curso");
+      setCreateForm({ name: "", email: "", password: "" });
+      toast.success("Aluno criado e matriculado no curso");
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao adicionar aluno"),
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao criar aluno"),
   });
 
   const removeMut = useMutation({
@@ -63,22 +71,6 @@ export const CourseEnrollments = ({ courseId }: Props) => {
     },
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao remover aluno"),
   });
-
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) return;
-    setSearching(true);
-    try {
-      const r = await api.get(`/admin/users`, { params: { search: searchEmail } });
-      const payload = r.data.data ?? r.data;
-      const results = Array.isArray(payload) ? payload : (payload.content ?? []);
-      const enrolledIds = new Set(enrollments.map((e) => e.userId));
-      setSearchResults(results.filter((u: any) => !enrolledIds.has(u.id)));
-    } catch {
-      toast.error("Erro ao buscar usuários");
-    } finally {
-      setSearching(false);
-    }
-  };
 
   return (
     <>
