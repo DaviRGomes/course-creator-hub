@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, ExternalLink } from "lucide-react";
 
 interface VideoItem { id: string; title: string; muxAssetId?: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
@@ -222,6 +222,13 @@ const ModuleDetailPage = () => {
         >
           📋 Sequência de Aulas
         </button>
+        <Link
+          to={`/admin/courses/${courseId}/modules/${moduleId}/activities`}
+          className="ml-auto px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 self-center"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Gerenciar Atividades
+        </Link>
         <button
           onClick={() => setActiveTab("materials")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
