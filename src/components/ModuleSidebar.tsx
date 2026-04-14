@@ -105,21 +105,50 @@ const ModuleSidebar = ({ courseId, moduleId, slug, currentId, currentType = "VID
             📁 Materiais de Apoio
           </p>
           <div className="flex flex-wrap gap-2">
-            {materials.map((m: any) => (
-              <a
-                key={m.id}
-                href={m.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
-              >
-                {m.type === "PDF" && "📄"}
-                {m.type === "IMAGE" && "🖼️"}
-                {m.type === "LINK" && "🔗"}
-                {m.type === "VIDEO_EXTRA" && "🎬"}
-                {m.title}
-              </a>
-            ))}
+            {materials.map((m: any) => {
+              const icon =
+                m.type === "PDF" ? "📄" :
+                m.type === "WORD" ? "📝" :
+                m.type === "TXT" ? "📃" :
+                m.type === "SLIDE" ? "📊" :
+                m.type === "IMAGE" ? "🖼️" :
+                m.type === "LINK" ? "🔗" :
+                m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
+
+              const handleClick = async () => {
+                if (m.hasFile) {
+                  try {
+                    const res = await api.get(
+                      `/courses/${courseId}/modules/${moduleId}/materials/${m.id}/download`,
+                      { responseType: "blob" }
+                    );
+                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.setAttribute("download", m.fileName || m.title);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch {
+                    toast.error("Erro ao baixar arquivo.");
+                  }
+                } else if (m.url) {
+                  window.open(m.url, "_blank", "noopener,noreferrer");
+                }
+              };
+
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={handleClick}
+                  className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
+                >
+                  {icon} {m.title}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -15,13 +15,34 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, ExternalLink, Upload, X } from "lucide-react";
 
 interface VideoItem { id: string; title: string; muxAssetId?: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
 interface Question { id?: string; questionText: string; questionType: string; orderIndex: number; points: number; options: Option[]; }
 interface Activity { id: string; title: string; description: string; sequenceOrder: number; passingScore: number; questions?: Question[]; }
-interface Material { id: string; title: string; url: string; type: "PDF" | "IMAGE" | "LINK" | "VIDEO_EXTRA"; description?: string; }
+interface Material {
+  id: string;
+  title: string;
+  url?: string;
+  type: "PDF" | "WORD" | "TXT" | "SLIDE" | "IMAGE" | "LINK" | "VIDEO_EXTRA";
+  description?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  hasFile?: boolean;
+}
+
+const FILE_UPLOAD_TYPES: Material["type"][] = ["PDF", "WORD", "TXT", "SLIDE"];
+const isFileUpload = (type: string) => FILE_UPLOAD_TYPES.includes(type as Material["type"]);
+const ALLOWED_EXTENSIONS = ".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx";
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 type SequenceItem = { type: "video"; data: VideoItem } | { type: "activity"; data: Activity };
 
@@ -53,6 +74,9 @@ const ModuleDetailPage = () => {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const base = `/courses/${courseId}/modules/${moduleId}`;
 
@@ -137,10 +161,15 @@ const ModuleDetailPage = () => {
   });
 
   const saveMaterialMut = useMutation({
-    mutationFn: () =>
-      editingMaterial
+    mutationFn: () => {
+      // editing a file-based material: only title is editable (no re-upload here)
+      if (editingMaterial?.hasFile) {
+        return api.put(`${base}/materials/${editingMaterial.id}`, { title: materialForm.title, type: materialForm.type }).then(() => {});
+      }
+      return editingMaterial
         ? api.put(`${base}/materials/${editingMaterial.id}`, materialForm).then(() => {})
-        : api.post(`${base}/materials`, materialForm).then(() => {}),
+        : api.post(`${base}/materials`, materialForm).then(() => {});
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["materials", moduleId] });
       setMaterialModalOpen(false);
@@ -150,6 +179,35 @@ const ModuleDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao salvar material"),
   });
 
+  const uploadMaterialMut = useMutation({
+    mutationFn: () => {
+      if (!selectedFile) throw new Error("Selecione um arquivo.");
+      const fd = new FormData();
+      fd.append("title", materialForm.title);
+      fd.append("type", materialForm.type);
+      fd.append("file", selectedFile);
+      return api.post(`${base}/materials/upload`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }).then(() => {});
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["materials", moduleId] });
+      setMaterialModalOpen(false);
+      setEditingMaterial(null);
+      setSelectedFile(null);
+      toast.success("Arquivo enviado com sucesso");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao enviar arquivo"),
+  });
+
+  const handleFileSelect = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Arquivo excede o limite de 50 MB.");
+      return;
+    }
+    setSelectedFile(file);
+  };
+
   const openCreateVideo = () => { setEditingVideo(null); setVideoForm({ title: "", duration: 0, sequenceOrder: sequence.length, muxAssetId: "" }); setVideoModalOpen(true); };
   const openEditVideo = (v: VideoItem) => { setEditingVideo(v); setVideoForm({ title: v.title, duration: v.duration, sequenceOrder: v.sequenceOrder, muxAssetId: v.muxAssetId || "" }); setVideoModalOpen(true); };
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
@@ -157,20 +215,25 @@ const ModuleDetailPage = () => {
 
   const openCreateMaterial = () => {
     setEditingMaterial(null);
+    setSelectedFile(null);
     setMaterialForm({ title: "", url: "", type: "PDF", description: "" });
     setMaterialModalOpen(true);
   };
   const openEditMaterial = (m: Material) => {
     setEditingMaterial(m);
-    setMaterialForm({ title: m.title, url: m.url, type: m.type, description: m.description || "" });
+    setSelectedFile(null);
+    setMaterialForm({ title: m.title, url: m.url || "", type: m.type, description: m.description || "" });
     setMaterialModalOpen(true);
   };
 
   const getMaterialIcon = (type: string) => {
     switch (type) {
-      case "PDF": return "📄";
+      case "PDF":   return "📄";
+      case "WORD":  return "📝";
+      case "TXT":   return "📃";
+      case "SLIDE": return "📊";
       case "IMAGE": return "🖼️";
-      case "LINK": return "🔗";
+      case "LINK":  return "🔗";
       case "VIDEO_EXTRA": return "🎬";
       default: return "📎";
     }
@@ -178,9 +241,12 @@ const ModuleDetailPage = () => {
 
   const getMaterialLabel = (type: string) => {
     switch (type) {
-      case "PDF": return "PDF";
+      case "PDF":   return "PDF";
+      case "WORD":  return "Word";
+      case "TXT":   return "TXT";
+      case "SLIDE": return "Slides";
       case "IMAGE": return "Imagem";
-      case "LINK": return "Link";
+      case "LINK":  return "Link";
       case "VIDEO_EXTRA": return "Vídeo Extra";
       default: return type;
     }
@@ -377,17 +443,20 @@ const ModuleDetailPage = () => {
                         {getMaterialLabel(m.type)}
                       </Badge>
                     </div>
-                    {m.description && (
-                      <p className="text-xs text-muted-foreground truncate">{m.description}</p>
+                    {m.hasFile ? (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {m.fileName} {m.fileSize && `· ${formatBytes(m.fileSize)}`}
+                      </p>
+                    ) : (
+                      <a
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline truncate block"
+                      >
+                        {m.url}
+                      </a>
                     )}
-                    <a
-                      href={m.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline truncate block"
-                    >
-                      {m.url}
-                    </a>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <Button variant="ghost" size="icon" onClick={() => openEditMaterial(m)}>
@@ -514,40 +583,144 @@ const ModuleDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={materialModalOpen} onOpenChange={(o) => { setMaterialModalOpen(o); if (!o) setEditingMaterial(null); }}>
+      <Dialog open={materialModalOpen} onOpenChange={(o) => { setMaterialModalOpen(o); if (!o) { setEditingMaterial(null); setSelectedFile(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingMaterial ? "Editar Material" : "Novo Material"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); saveMaterialMut.mutate(); }} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (isFileUpload(materialForm.type) && !editingMaterial?.hasFile) {
+                uploadMaterialMut.mutate();
+              } else {
+                saveMaterialMut.mutate();
+              }
+            }}
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select value={materialForm.type} onValueChange={(v) => setMaterialForm({ ...materialForm, type: v as Material["type"] })}>
+              <Select
+                value={materialForm.type}
+                onValueChange={(v) => {
+                  setSelectedFile(null);
+                  setMaterialForm({ ...materialForm, type: v as Material["type"] });
+                }}
+                disabled={!!editingMaterial}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PDF">📄 PDF</SelectItem>
-                  <SelectItem value="IMAGE">🖼️ Imagem</SelectItem>
+                  <SelectItem value="WORD">📝 Word (DOCX)</SelectItem>
+                  <SelectItem value="TXT">📃 TXT</SelectItem>
+                  <SelectItem value="SLIDE">📊 Slides (PPT/PPTX)</SelectItem>
+                  <SelectItem value="IMAGE">🖼️ Imagem (link)</SelectItem>
                   <SelectItem value="LINK">🔗 Link</SelectItem>
                   <SelectItem value="VIDEO_EXTRA">🎬 Vídeo Extra</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label>Título</Label>
-              <Input value={materialForm.title} onChange={(e) => setMaterialForm({ ...materialForm, title: e.target.value })} placeholder="Ex: Apostila de Calls" required />
+              <Input
+                value={materialForm.title}
+                onChange={(e) => setMaterialForm({ ...materialForm, title: e.target.value })}
+                placeholder="Ex: Apostila de Calls"
+                required
+              />
             </div>
-            <div className="space-y-2">
-              <Label>URL</Label>
-              <Input value={materialForm.url} onChange={(e) => setMaterialForm({ ...materialForm, url: e.target.value })} placeholder="https://drive.google.com/... ou https://..." required />
-              <p className="text-xs text-muted-foreground">Para PDFs: use Google Drive com link público. Para imagens: link direto da imagem.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição (opcional)</Label>
-              <Textarea value={materialForm.description} onChange={(e) => setMaterialForm({ ...materialForm, description: e.target.value })} placeholder="Breve descrição do material..." rows={2} />
-            </div>
+
+            {/* File upload zone */}
+            {isFileUpload(materialForm.type) && !editingMaterial?.hasFile && (
+              <div className="space-y-2">
+                <Label>Arquivo</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ALLOWED_EXTENSIONS}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileSelect(f);
+                  }}
+                />
+                {selectedFile ? (
+                  <div className="flex items-center gap-3 border border-border rounded-lg px-4 py-3 bg-secondary/40">
+                    <span className="text-2xl">{getMaterialIcon(materialForm.type)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(selectedFile.size)}</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      const f = e.dataTransfer.files[0];
+                      if (f) handleFileSelect(f);
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg px-6 py-8 flex flex-col items-center gap-2 cursor-pointer transition-colors ${
+                      dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-accent/30"
+                    }`}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Arraste o arquivo aqui</p>
+                    <p className="text-xs text-muted-foreground">ou clique para selecionar</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, PPTX, XLSX, TXT — máx. 50 MB</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Editing a file-based material: show current file as readonly */}
+            {editingMaterial?.hasFile && (
+              <div className="flex items-center gap-3 border border-border rounded-lg px-4 py-3 bg-secondary/20">
+                <span className="text-2xl">{getMaterialIcon(materialForm.type)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{editingMaterial.fileName}</p>
+                  {editingMaterial.fileSize && (
+                    <p className="text-xs text-muted-foreground">{formatBytes(editingMaterial.fileSize)}</p>
+                  )}
+                </div>
+                <Badge variant="secondary" className="text-xs shrink-0">Arquivo atual</Badge>
+              </div>
+            )}
+
+            {/* URL input for non-file types */}
+            {!isFileUpload(materialForm.type) && (
+              <div className="space-y-2">
+                <Label>URL</Label>
+                <Input
+                  value={materialForm.url}
+                  onChange={(e) => setMaterialForm({ ...materialForm, url: e.target.value })}
+                  placeholder="https://..."
+                  required
+                />
+              </div>
+            )}
+
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setMaterialModalOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saveMaterialMut.isPending}>{saveMaterialMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button>
+              <Button
+                type="submit"
+                disabled={
+                  saveMaterialMut.isPending ||
+                  uploadMaterialMut.isPending ||
+                  (isFileUpload(materialForm.type) && !editingMaterial?.hasFile && !selectedFile)
+                }
+              >
+                {(saveMaterialMut.isPending || uploadMaterialMut.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isFileUpload(materialForm.type) && !editingMaterial?.hasFile ? "Enviar Arquivo" : "Salvar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
