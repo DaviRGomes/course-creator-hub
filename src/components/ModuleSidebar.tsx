@@ -116,15 +116,15 @@ const ModuleSidebar = ({ courseId, moduleId, slug, currentId, currentType = "VID
                 m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
 
               const handleClick = () => {
-                if (m.hasFile) {
+                if (m.url) {
+                  window.open(m.url, "_blank", "noopener,noreferrer");
+                } else {
                   const base = (api.defaults.baseURL || "/api").replace(/\/$/, "");
                   window.open(
                     `${base}/courses/${courseId}/modules/${moduleId}/materials/${m.id}/download`,
                     "_blank",
                     "noopener,noreferrer"
                   );
-                } else if (m.url) {
-                  window.open(m.url, "_blank", "noopener,noreferrer");
                 }
               };
 
