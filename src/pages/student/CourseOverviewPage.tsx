@@ -233,17 +233,27 @@ const CourseOverviewPage = () => {
                 (q.data as any[]).every((item: any) => item.status === "COMPLETED")
               );
 
-            return allCompleted ? (
-              <div className="mt-8 text-center bg-card border border-border rounded-xl p-6">
-                <p className="text-foreground font-medium mb-4">
-                  🎉 Parabéns! Você concluiu todos os módulos do curso.
+            if (!allCompleted) return null;
+
+            return (
+              <div className="mt-8 bg-gradient-to-br from-primary/10 via-card to-card border border-primary/30 rounded-2xl p-8 text-center shadow-sm">
+                <div className="text-5xl mb-4">🎓</div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  Parabéns, você concluiu o curso!
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Você completou 100% do conteúdo. Agora é hora de garantir o seu certificado.
                 </p>
-                <Button onClick={() => navigate(`/certificate/${courseId}`)} className="gap-2">
-                  <Award className="h-4 w-4" />
-                  Ver Certificado
+                <Button
+                  size="lg"
+                  onClick={() => navigate(`/certificate/${courseId}`)}
+                  className="gap-2 px-8 text-base"
+                >
+                  <Award className="h-5 w-5" />
+                  Finalizar Curso
                 </Button>
               </div>
-            ) : null;
+            );
           })()}
         </>
       )}

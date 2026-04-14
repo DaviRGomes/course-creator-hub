@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock, Award } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -81,12 +81,22 @@ const LessonPlayerPage = () => {
       queryClient.invalidateQueries({ queryKey: ["module", moduleId] });
       queryClient.invalidateQueries({ queryKey: ["course-overview", slug] });
       queryClient.invalidateQueries({ queryKey: ["student-modules", courseId] });
+      queryClient.invalidateQueries({ queryKey: ["cert-status", courseId] });
       refetchVideos();
     },
     onError: () => {
       setCompleted(true);
       toast.success("Aula marcada como concluída!");
     },
+  });
+
+  const isDoneLastLesson = (completed || completedIds.has(String(currentVideo?.id))) && !nextVideo;
+
+  const { data: certStatus } = useQuery({
+    queryKey: ["cert-status", courseId],
+    queryFn: () =>
+      api.get(`/student/courses/${courseId}/certificate-status`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId && isDoneLastLesson,
   });
 
   const handleMarkWatched = () => {
@@ -159,7 +169,7 @@ const LessonPlayerPage = () => {
                     navigate(`/learn/${slug}/modules/${moduleId}/lesson/${next.id}`);
                   }, 2000);
                 } else {
-                  setTimeout(() => toast.success("🎉 Parabéns! Você concluiu todas as aulas deste módulo!"), 500);
+                  setTimeout(() => toast.success("🎉 Módulo concluído! Confira o botão abaixo."), 500);
                 }
               }}
               accentColor="#6366f1"
@@ -217,6 +227,18 @@ const LessonPlayerPage = () => {
                 }}
               >
                 {nextVideo.title} <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : certStatus?.progressOk ? (
+              <Button
+                onClick={() => navigate(`/certificate/${courseId}`)}
+                className="gap-2"
+              >
+                <Award className="h-4 w-4" />
+                Finalizar Curso
+              </Button>
+            ) : isDoneLastLesson ? (
+              <Button variant="outline" onClick={() => navigate(`/learn/${slug}`)}>
+                Ver resumo do curso <ArrowRight className="h-4 w-4" />
               </Button>
             ) : <div />}
           </div>
