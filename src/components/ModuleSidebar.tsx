@@ -115,24 +115,14 @@ const ModuleSidebar = ({ courseId, moduleId, slug, currentId, currentType = "VID
                 m.type === "LINK" ? "🔗" :
                 m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
 
-              const handleClick = async () => {
+              const handleClick = () => {
                 if (m.hasFile) {
-                  try {
-                    const res = await api.get(
-                      `/courses/${courseId}/modules/${moduleId}/materials/${m.id}/download`,
-                      { responseType: "blob" }
-                    );
-                    const url = window.URL.createObjectURL(new Blob([res.data]));
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.setAttribute("download", m.fileName || m.title);
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
-                  } catch {
-                    toast.error("Erro ao baixar arquivo.");
-                  }
+                  const base = (api.defaults.baseURL || "/api").replace(/\/$/, "");
+                  window.open(
+                    `${base}/courses/${courseId}/modules/${moduleId}/materials/${m.id}/download`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
                 } else if (m.url) {
                   window.open(m.url, "_blank", "noopener,noreferrer");
                 }
