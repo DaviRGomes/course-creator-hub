@@ -182,21 +182,40 @@ const CourseOverviewPage = () => {
                           📁 Materiais de Apoio
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {modMaterials.map((m: any) => (
-                            <a
-                              key={m.id}
-                              href={m.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
-                            >
-                              {m.type === "PDF" && "📄"}
-                              {m.type === "IMAGE" && "🖼️"}
-                              {m.type === "LINK" && "🔗"}
-                              {m.type === "VIDEO_EXTRA" && "🎬"}
-                              {m.title}
-                            </a>
-                          ))}
+                          {modMaterials.map((m: any) => {
+                            const icon =
+                              m.type === "PDF" ? "📄" :
+                              m.type === "WORD" ? "📝" :
+                              m.type === "TXT" ? "📃" :
+                              m.type === "SLIDE" ? "📊" :
+                              m.type === "IMAGE" ? "🖼️" :
+                              m.type === "LINK" ? "🔗" :
+                              m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
+
+                            const handleClick = () => {
+                              if (m.hasFile) {
+                                const base = (api.defaults.baseURL || "/api").replace(/\/$/, "");
+                                window.open(
+                                  `${base}/courses/${courseId}/modules/${mod.id}/materials/${m.id}/download`,
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                );
+                              } else if (m.url) {
+                                window.open(m.url, "_blank", "noopener,noreferrer");
+                              }
+                            };
+
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={handleClick}
+                                className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
+                              >
+                                {icon} {m.title}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     );
