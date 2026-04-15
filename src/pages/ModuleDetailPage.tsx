@@ -102,9 +102,6 @@ const ModuleDetailPage = () => {
   const [localSequence, setLocalSequence] = useState<SequenceItem[]>([]);
   const [localMaterials, setLocalMaterials] = useState<Material[]>([]);
 
-  useEffect(() => { setLocalSequence([...videos.map((v) => ({ type: "video" as const, data: v })), ...activities.map((a) => ({ type: "activity" as const, data: a }))].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder)); }, [videos, activities]);
-  useEffect(() => { setLocalMaterials(materials); }, [materials]);
-
   // Materials state — now per video
   const [activeMaterialVideoId, setActiveMaterialVideoId] = useState<string | null>(null);
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
@@ -139,6 +136,11 @@ const ModuleDetailPage = () => {
         .catch(() => []),
     enabled: !!activeMaterialVideoId,
   });
+
+  useEffect(() => {
+    setLocalSequence([...videos.map((v) => ({ type: "video" as const, data: v })), ...activities.map((a) => ({ type: "activity" as const, data: a }))].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder));
+  }, [videos, activities]);
+  useEffect(() => { setLocalMaterials(materials); }, [materials]);
 
   const sequence: SequenceItem[] = [
     ...videos.map((v) => ({ type: "video" as const, data: v })),
