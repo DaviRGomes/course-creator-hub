@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import ModuleSidebar from "@/components/ModuleSidebar";
+import CourseSidebar from "@/components/CourseSidebar";
 
 const QuizPage = () => {
   const { slug, moduleId, quizId } = useParams();
@@ -242,10 +242,10 @@ const QuizPage = () => {
           )}
         </div>
 
-        <ModuleSidebar
+        <CourseSidebar
           courseId={courseId}
-          moduleId={moduleId!}
           slug={slug!}
+          currentModuleId={moduleId}
           currentId={quizId}
           currentType="ACTIVITY"
           completed={passed}

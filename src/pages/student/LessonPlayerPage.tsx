@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
-import ModuleSidebar from "@/components/ModuleSidebar";
+import CourseSidebar from "@/components/CourseSidebar";
 
 const formatDuration = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -244,10 +244,10 @@ const LessonPlayerPage = () => {
           </div>
         </div>
 
-        <ModuleSidebar
+        <CourseSidebar
           courseId={courseId}
-          moduleId={moduleId!}
           slug={slug!}
+          currentModuleId={moduleId}
           currentId={lessonId}
           currentType="VIDEO"
           completed={completed}
