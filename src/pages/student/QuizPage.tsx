@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Loader2, Paperclip, FileText, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import CourseSidebar from "@/components/CourseSidebar";
@@ -37,6 +37,15 @@ const QuizPage = () => {
     queryFn: () =>
       api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}`)
         .then((r) => r.data.data ?? r.data),
+    enabled: !!courseId,
+  });
+
+  const { data: materials = [] } = useQuery<any[]>({
+    queryKey: ["activity-materials", quizId],
+    queryFn: () =>
+      api.get(`/courses/${courseId}/modules/${moduleId}/activities/${quizId}/materials`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => []),
     enabled: !!courseId,
   });
 
@@ -131,6 +140,38 @@ const QuizPage = () => {
               </div>
               <Badge variant="outline">Mínimo: {activity.passingScore}%</Badge>
             </div>
+
+            {materials.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Materiais de Apoio
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {materials.map((m: any) => (
+                    <button
+                      key={m.id}
+                      onClick={() =>
+                        api.get(
+                          `/courses/${courseId}/modules/${moduleId}/activities/${quizId}/materials/${m.id}/download`,
+                          { responseType: "blob" }
+                        ).then((r) => {
+                          const url = URL.createObjectURL(r.data);
+                          window.open(url, "_blank");
+                        })
+                      }
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm"
+                    >
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="flex-1 truncate">{m.title || m.fileName}</span>
+                      <Download className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {questions.length === 0 ? (

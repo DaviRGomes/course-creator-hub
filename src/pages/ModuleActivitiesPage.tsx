@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -19,8 +19,17 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, Plus, Pencil, Trash2, Loader2, FileText, ChevronDown, ChevronRight,
+  Paperclip, Download, Upload,
 } from "lucide-react";
 
+interface Material {
+  id: string;
+  title: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  hasFile: boolean;
+}
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
 interface Question {
   id?: string;
@@ -45,6 +54,149 @@ const QUESTION_TYPE_LABEL: Record<string, string> = {
   ESSAY: "Dissertativa",
   FILE_UPLOAD: "Upload de Arquivo",
 };
+
+// ─── Activity Materials Panel (fetches its own data) ─────────────────────────
+
+function ActivityMaterialsPanel({
+  courseId, moduleId, activityId,
+}: { courseId: string; moduleId: string; activityId: string }) {
+  const qc = useQueryClient();
+  const base = `/courses/${courseId}/modules/${moduleId}`;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState("");
+
+  const { data: materials = [], isLoading } = useQuery<Material[]>({
+    queryKey: ["activity-materials", activityId],
+    queryFn: () =>
+      api.get(`${base}/activities/${activityId}/materials`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => []),
+  });
+
+  const uploadMut = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("title", title || file.name);
+      fd.append("file", file);
+      return api.post(`${base}/activities/${activityId}/materials/upload`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["activity-materials", activityId] });
+      setTitle("");
+      toast.success("Material anexado");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao fazer upload"),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (matId: string) =>
+      api.delete(`${base}/activities/${activityId}/materials/${matId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["activity-materials", activityId] });
+      toast.success("Material removido");
+    },
+  });
+
+  const formatSize = (bytes: number) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="border-t border-border bg-muted/20 px-4 py-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Materiais
+        </span>
+      </div>
+
+      {isLoading ? (
+        <Skeleton className="h-8 w-full" />
+      ) : materials.length > 0 ? (
+        <div className="space-y-1.5 mb-3">
+          {materials.map((m) => (
+            <div key={m.id} className="flex items-center gap-2 bg-card border border-border rounded-md px-3 py-2">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-sm flex-1 truncate">{m.title}</span>
+              {m.fileSize && (
+                <span className="text-xs text-muted-foreground shrink-0">{formatSize(m.fileSize)}</span>
+              )}
+              <a
+                href={`${base}/activities/${activityId}/materials/${m.id}/download`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  api.get(`${base}/activities/${activityId}/materials/${m.id}/download`, { responseType: "blob" })
+                    .then((r) => {
+                      const url = URL.createObjectURL(r.data);
+                      window.open(url, "_blank");
+                    });
+                }}
+                className="shrink-0"
+              >
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Download className="h-3 w-3" />
+                </Button>
+              </a>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => deleteMut.mutate(m.id)}
+                disabled={deleteMut.isPending}
+              >
+                <Trash2 className="h-3 w-3 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mb-2">Nenhum material anexado.</p>
+      )}
+
+      {/* Upload row */}
+      <div className="flex items-center gap-2">
+        <Input
+          className="h-7 text-xs flex-1"
+          placeholder="Título do arquivo (opcional)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadMut.mutate(file);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs shrink-0"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploadMut.isPending}
+        >
+          {uploadMut.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Upload className="h-3 w-3" />
+          )}
+          Anexar
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 const ModuleActivitiesPage = () => {
   const { id: courseId, moduleId } = useParams<{ id: string; moduleId: string }>();
@@ -320,67 +472,76 @@ const ModuleActivitiesPage = () => {
 
                   {/* Questions panel */}
                   {isExpanded && (
-                    <div className="border-t border-border bg-muted/30 px-4 py-3">
-                      {(act.questions?.length ?? 0) === 0 ? (
-                        <p className="text-sm text-muted-foreground py-2 text-center">
-                          Nenhuma questão ainda.{" "}
-                          <button
-                            onClick={() => openAddQuestion(act)}
-                            className="text-primary hover:underline"
-                          >
-                            Adicionar questão
-                          </button>
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {act.questions?.map((q, qi) => (
-                            <div
-                              key={q.id || qi}
-                              className="bg-card border border-border rounded-md p-3"
+                    <>
+                      <div className="border-t border-border bg-muted/30 px-4 py-3">
+                        {(act.questions?.length ?? 0) === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2 text-center">
+                            Nenhuma questão ainda.{" "}
+                            <button
+                              onClick={() => openAddQuestion(act)}
+                              className="text-primary hover:underline"
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className="text-xs text-muted-foreground font-medium">
-                                      Q{qi + 1}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {QUESTION_TYPE_LABEL[q.questionType] ?? q.questionType}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {q.points} pt{q.points !== 1 ? "s" : ""}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-foreground">{q.questionText}</p>
-                                  {q.options && q.options.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                      {q.options.map((o, oi) => (
-                                        <span
-                                          key={oi}
-                                          className={`text-xs px-2 py-0.5 rounded border ${
-                                            o.isCorrect
-                                              ? "bg-green-50 text-green-700 border-green-200 font-medium"
-                                              : "bg-secondary text-secondary-foreground border-transparent"
-                                          }`}
-                                        >
-                                          {o.optionText}
-                                          {o.isCorrect && " ✓"}
-                                        </span>
-                                      ))}
+                              Adicionar questão
+                            </button>
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {act.questions?.map((q, qi) => (
+                              <div
+                                key={q.id || qi}
+                                className="bg-card border border-border rounded-md p-3"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                      <span className="text-xs text-muted-foreground font-medium">
+                                        Q{qi + 1}
+                                      </span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {QUESTION_TYPE_LABEL[q.questionType] ?? q.questionType}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        {q.points} pt{q.points !== 1 ? "s" : ""}
+                                      </span>
                                     </div>
-                                  )}
+                                    <p className="text-sm text-foreground">{q.questionText}</p>
+                                    {q.options && q.options.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {q.options.map((o, oi) => (
+                                          <span
+                                            key={oi}
+                                            className={`text-xs px-2 py-0.5 rounded border ${
+                                              o.isCorrect
+                                                ? "bg-green-50 text-green-700 border-green-200 font-medium"
+                                                : "bg-secondary text-secondary-foreground border-transparent"
+                                            }`}
+                                          >
+                                            {o.optionText}
+                                            {o.isCorrect && " ✓"}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-3 flex justify-end">
+                          <Button size="sm" variant="outline" onClick={() => openAddQuestion(act)}>
+                            <Plus className="h-3.5 w-3.5" /> Adicionar Questão
+                          </Button>
                         </div>
-                      )}
-                      <div className="mt-3 flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => openAddQuestion(act)}>
-                          <Plus className="h-3.5 w-3.5" /> Adicionar Questão
-                        </Button>
                       </div>
-                    </div>
+
+                      {/* Materials panel */}
+                      <ActivityMaterialsPanel
+                        courseId={courseId!}
+                        moduleId={moduleId!}
+                        activityId={act.id}
+                      />
+                    </>
                   )}
                 </div>
               );
