@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableItem } from "@/components/SortableItem";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +55,9 @@ const CourseDetailPage = () => {
   const [productNameSaved, setProductNameSaved] = useState("");
   const [savingMapping, setSavingMapping] = useState(false);
 
+  const [localModules, setLocalModules] = useState<Module[]>([]);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Module | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -65,6 +71,16 @@ const CourseDetailPage = () => {
   const { data: modules = [], isLoading: modulesLoading } = useQuery<Module[]>({
     queryKey: ["modules", id],
     queryFn: () => api.get(`/courses/${id}/modules`).then((r) => r.data.data ?? r.data),
+  });
+
+  useEffect(() => {
+    setLocalModules([...modules].sort((a, b) => a.orderIndex - b.orderIndex));
+  }, [modules]);
+
+  const reorderMut = useMutation({
+    mutationFn: (ids: string[]) => api.patch(`/courses/${id}/modules/reorder`, { ids: ids.map(Number) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["modules", id] }),
+    onError: () => { setLocalModules([...modules].sort((a, b) => a.orderIndex - b.orderIndex)); toast.error("Erro ao reordenar"); },
   });
 
   // Fetch product mapping for this course
@@ -303,40 +319,43 @@ const CourseDetailPage = () => {
       ) : modules.length === 0 ? (
         <EmptyState icon={Layers} message="Nenhum módulo encontrado." actionLabel="Criar Primeiro Módulo" onAction={openCreate} />
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Aulas</TableHead>
-                <TableHead>Atividades</TableHead>
-                <TableHead className="w-36">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {modules.sort((a, b) => a.orderIndex - b.orderIndex).map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="text-muted-foreground">{m.orderIndex + 1}</TableCell>
-                  <TableCell className="font-medium">{m.title}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{m.description}</TableCell>
-                  <TableCell>{m.videosCount ?? "-"}</TableCell>
-                  <TableCell>{m.activitiesCount ?? "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={({ active, over }) => {
+            if (!over || active.id === over.id) return;
+            const oldIdx = localModules.findIndex((m) => m.id === active.id);
+            const newIdx = localModules.findIndex((m) => m.id === over.id);
+            const reordered = arrayMove(localModules, oldIdx, newIdx);
+            setLocalModules(reordered);
+            reorderMut.mutate(reordered.map((m) => m.id));
+          }}
+        >
+          <SortableContext items={localModules.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+            <div className="bg-card rounded-lg border border-border overflow-hidden divide-y divide-border">
+              {localModules.map((m, idx) => (
+                <SortableItem key={m.id} id={m.id}>
+                  <div className="flex items-center gap-3 px-3 py-3">
+                    <span className="text-xs text-muted-foreground w-5 shrink-0">{idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-foreground">{m.title}</p>
+                      {m.description && <p className="text-xs text-muted-foreground truncate max-w-xs">{m.description}</p>}
+                    </div>
+                    <span className="text-xs text-muted-foreground hidden sm:block">{m.videosCount ?? 0} aulas</span>
+                    <span className="text-xs text-muted-foreground hidden sm:block">{m.activitiesCount ?? 0} atividades</span>
+                    <div className="flex gap-1 shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/courses/${id}/modules/${m.id}`)}>
                         <Eye className="h-4 w-4" /> Ver
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                </SortableItem>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setEditing(null); }}>

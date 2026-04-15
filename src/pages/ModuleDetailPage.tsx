@@ -1,6 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableItem } from "@/components/SortableItem";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +97,13 @@ const ModuleDetailPage = () => {
     ], correctAnswer: "true",
   });
   const [activeActForQuestions, setActiveActForQuestions] = useState<Activity | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const [localSequence, setLocalSequence] = useState<SequenceItem[]>([]);
+  const [localMaterials, setLocalMaterials] = useState<Material[]>([]);
+
+  useEffect(() => { setLocalSequence([...videos.map((v) => ({ type: "video" as const, data: v })), ...activities.map((a) => ({ type: "activity" as const, data: a }))].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder)); }, [videos, activities]);
+  useEffect(() => { setLocalMaterials(materials); }, [materials]);
 
   // Materials state — now per video
   const [activeMaterialVideoId, setActiveMaterialVideoId] = useState<string | null>(null);
@@ -233,6 +243,26 @@ const ModuleDetailPage = () => {
     onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao enviar arquivo"),
   });
 
+  const reorderSequenceMut = useMutation({
+    mutationFn: (items: { type: string; id: string }[]) =>
+      api.patch(`${base}/sequence/reorder`, { items: items.map((i) => ({ type: i.type === "video" ? "VIDEO" : "ACTIVITY", id: Number(i.id) })) }),
+    onError: () => { setLocalSequence(sequence); toast.error("Erro ao reordenar"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["videos", moduleId] }); qc.invalidateQueries({ queryKey: ["activities", moduleId] }); },
+  });
+
+  const reorderMaterialsMut = useMutation({
+    mutationFn: (ids: string[]) =>
+      api.patch(`${base}/videos/${activeMaterialVideoId}/materials/reorder`, { ids: ids.map(Number) }),
+    onError: () => { setLocalMaterials(materials); toast.error("Erro ao reordenar"); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] }),
+  });
+
+  const reorderQuestionsMut = useMutation({
+    mutationFn: ({ actId, ids }: { actId: string; ids: string[] }) =>
+      api.patch(`${base}/activities/${actId}/questions/reorder`, { ids: ids.map(Number) }),
+    onError: () => toast.error("Erro ao reordenar questões"),
+  });
+
   const handleFileSelect = (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
       toast.error("Arquivo excede o limite de 50 MB.");
@@ -305,52 +335,42 @@ const ModuleDetailPage = () => {
 
           {isLoading ? (
             <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-          ) : sequence.length === 0 ? (
+          ) : localSequence.length === 0 ? (
             <EmptyState icon={Video} message="Nenhuma aula ou atividade encontrada." actionLabel="Criar Primeira Aula" onAction={openCreateVideo} />
           ) : (
-            <div className="bg-card rounded-lg border border-border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Seq</TableHead>
-                    <TableHead className="w-28">Tipo</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Info</TableHead>
-                    <TableHead className="w-36">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sequence.map((item) => (
-                    <TableRow key={`${item.type}-${item.data.id}`}>
-                      <TableCell className="text-muted-foreground">{item.data.sequenceOrder}</TableCell>
-                      <TableCell>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const oldIdx = localSequence.findIndex((i) => `${i.type}-${i.data.id}` === active.id);
+              const newIdx = localSequence.findIndex((i) => `${i.type}-${i.data.id}` === over.id);
+              const reordered = arrayMove(localSequence, oldIdx, newIdx);
+              setLocalSequence(reordered);
+              reorderSequenceMut.mutate(reordered.map((i) => ({ type: i.type, id: i.data.id })));
+            }}>
+              <SortableContext items={localSequence.map((i) => `${i.type}-${i.data.id}`)} strategy={verticalListSortingStrategy}>
+                <div className="bg-card rounded-lg border border-border overflow-hidden divide-y divide-border">
+                  {localSequence.map((item, idx) => (
+                    <SortableItem key={`${item.type}-${item.data.id}`} id={`${item.type}-${item.data.id}`}>
+                      <div className="flex items-center gap-3 px-3 py-2.5">
+                        <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}</span>
                         {item.type === "video" ? (
-                          <Badge variant="secondary" className="gap-1"><Video className="h-3 w-3" /> Aula</Badge>
+                          <Badge variant="secondary" className="gap-1 shrink-0"><Video className="h-3 w-3" /> Aula</Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1"><FileText className="h-3 w-3" /> Atividade</Badge>
+                          <Badge variant="outline" className="gap-1 shrink-0"><FileText className="h-3 w-3" /> Atividade</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="font-medium">{item.data.title}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.type === "video" ? (
-                          <span className="flex items-center gap-2">
-                            {formatDuration((item.data as VideoItem).duration)}
-                            {(item.data as VideoItem).muxStatus === "ready" && <Badge variant="secondary" className="text-xs">Mux ✓</Badge>}
-                            {(item.data as VideoItem).muxStatus === "preparing" && <Badge variant="outline" className="text-xs text-amber-600">Processando</Badge>}
-                          </span>
-                        ) : `Nota: ${(item.data as Activity).passingScore}%`}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
+                        <span className="flex-1 font-medium text-sm truncate">{item.data.title}</span>
+                        <span className="text-xs text-muted-foreground hidden sm:block shrink-0">
+                          {item.type === "video" ? (
+                            <span className="flex items-center gap-1">
+                              {formatDuration((item.data as VideoItem).duration)}
+                              {(item.data as VideoItem).muxStatus === "ready" && <Badge variant="secondary" className="text-xs">Mux ✓</Badge>}
+                            </span>
+                          ) : `Nota: ${(item.data as Activity).passingScore}%`}
+                        </span>
+                        <div className="flex gap-1 shrink-0">
                           <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                           {item.type === "video" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Materiais desta aula"
-                              onClick={() => openMaterialsPanel(item.data.id)}
-                            >
+                            <Button variant="ghost" size="icon" title="Materiais" onClick={() => openMaterialsPanel(item.data.id)}>
                               <FolderOpen className="h-4 w-4 text-primary" />
                             </Button>
                           )}
@@ -358,12 +378,12 @@ const ModuleDetailPage = () => {
                             <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </SortableItem>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
 
           {activeActForQuestions && (
@@ -381,9 +401,20 @@ const ModuleDetailPage = () => {
               {(activeActForQuestions.questions?.length ?? 0) === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma questão adicionada ainda.</p>
               ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+                  if (!over || active.id === over.id || !activeActForQuestions.questions) return;
+                  const qs = [...activeActForQuestions.questions];
+                  const oldIdx = qs.findIndex((q) => String(q.id) === active.id);
+                  const newIdx = qs.findIndex((q) => String(q.id) === over.id);
+                  const reordered = arrayMove(qs, oldIdx, newIdx);
+                  setActiveActForQuestions({ ...activeActForQuestions, questions: reordered });
+                  reorderQuestionsMut.mutate({ actId: activeActForQuestions.id, ids: reordered.map((q) => String(q.id!)) });
+                }}>
+                <SortableContext items={(activeActForQuestions.questions ?? []).map((q) => String(q.id))} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3">
                   {activeActForQuestions.questions?.map((q, qi) => (
-                    <div key={q.id || qi} className="border border-border rounded-md p-3">
+                    <SortableItem key={q.id || qi} id={String(q.id)} className="border border-border rounded-md">
+                    <div className="p-3">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <span className="text-xs text-muted-foreground">Questão {qi + 1} — {q.questionType === "MULTIPLE_CHOICE" ? "Múltipla Escolha" : q.questionType === "TRUE_FALSE" ? "V ou F" : q.questionType} ({q.points}pts)</span>
@@ -400,8 +431,11 @@ const ModuleDetailPage = () => {
                         </div>
                       )}
                     </div>
+                    </SortableItem>
                   ))}
                 </div>
+                </SortableContext>
+                </DndContext>
               )}
             </div>
           )}
@@ -437,11 +471,20 @@ const ModuleDetailPage = () => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {materials.map((m) => (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const oldIdx = localMaterials.findIndex((m) => m.id === active.id);
+              const newIdx = localMaterials.findIndex((m) => m.id === over.id);
+              const reordered = arrayMove(localMaterials, oldIdx, newIdx);
+              setLocalMaterials(reordered);
+              reorderMaterialsMut.mutate(reordered.map((m) => m.id));
+            }}>
+              <SortableContext items={localMaterials.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+              {localMaterials.map((m) => (
+                <SortableItem key={m.id} id={m.id} className="bg-card border border-border rounded-lg">
                 <div
-                  key={m.id}
-                  className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-4"
+                  className="flex items-center gap-3 pr-3 py-2"
                 >
                   <span className="text-2xl">{getMaterialIcon(m.type)}</span>
                   <div className="flex-1 min-w-0">
@@ -479,8 +522,11 @@ const ModuleDetailPage = () => {
                     </Button>
                   </div>
                 </div>
+                </SortableItem>
               ))}
-            </div>
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       )}
