@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock, Award } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, PlayCircle, Loader2, Lock, Award, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -53,6 +53,15 @@ const LessonPlayerPage = () => {
     queryKey: ["module-sequence", courseId, Number(moduleId)],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
     enabled: !!courseId,
+  });
+
+  const { data: lessonMaterials = [] } = useQuery<any[]>({
+    queryKey: ["materials", "video", lessonId],
+    queryFn: () =>
+      api.get(`/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/materials`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => []),
+    enabled: !!courseId && !!lessonId,
   });
 
   const completedIds = new Set(
@@ -242,6 +251,51 @@ const LessonPlayerPage = () => {
               </Button>
             ) : <div />}
           </div>
+
+          {lessonMaterials.length > 0 && (
+            <div className="pt-4 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                📁 Materiais desta aula
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {lessonMaterials.map((m: any) => {
+                  const icon =
+                    m.type === "PDF" ? "📄" :
+                    m.type === "WORD" ? "📝" :
+                    m.type === "TXT" ? "📃" :
+                    m.type === "SLIDE" ? "📊" :
+                    m.type === "IMAGE" ? "🖼️" :
+                    m.type === "LINK" ? "🔗" :
+                    m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
+
+                  const handleClick = () => {
+                    if (m.url) {
+                      window.open(m.url, "_blank", "noopener,noreferrer");
+                    } else {
+                      const base = (api.defaults.baseURL || "/api").replace(/\/$/, "");
+                      window.open(
+                        `${base}/courses/${courseId}/modules/${moduleId}/videos/${lessonId}/materials/${m.id}/download`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={handleClick}
+                      className="flex items-center gap-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {icon} {m.title}
+                      {m.hasFile ? <Download className="h-3.5 w-3.5 ml-1 opacity-60" /> : <ExternalLink className="h-3.5 w-3.5 ml-1 opacity-60" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <CourseSidebar

@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, ExternalLink, Upload, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, Video, FileText, Loader2, ExternalLink, Upload, X, FolderOpen } from "lucide-react";
 
 interface VideoItem { id: string; title: string; muxAssetId?: string; muxPlaybackId?: string; muxStatus?: string; duration: number; sequenceOrder: number; }
 interface Option { optionText: string; isCorrect: boolean; orderIndex: number; }
@@ -48,6 +48,32 @@ type SequenceItem = { type: "video"; data: VideoItem } | { type: "activity"; dat
 
 const formatDuration = (s: number) => { const m = Math.floor(s / 60); const sec = s % 60; return `${m}:${sec.toString().padStart(2, "0")}`; };
 
+const getMaterialIcon = (type: string) => {
+  switch (type) {
+    case "PDF":   return "📄";
+    case "WORD":  return "📝";
+    case "TXT":   return "📃";
+    case "SLIDE": return "📊";
+    case "IMAGE": return "🖼️";
+    case "LINK":  return "🔗";
+    case "VIDEO_EXTRA": return "🎬";
+    default: return "📎";
+  }
+};
+
+const getMaterialLabel = (type: string) => {
+  switch (type) {
+    case "PDF":   return "PDF";
+    case "WORD":  return "Word";
+    case "TXT":   return "TXT";
+    case "SLIDE": return "Slides";
+    case "IMAGE": return "Imagem";
+    case "LINK":  return "Link";
+    case "VIDEO_EXTRA": return "Vídeo Extra";
+    default: return type;
+  }
+};
+
 const ModuleDetailPage = () => {
   const { id: courseId, moduleId } = useParams<{ id: string; moduleId: string }>();
   const qc = useQueryClient();
@@ -69,8 +95,8 @@ const ModuleDetailPage = () => {
   });
   const [activeActForQuestions, setActiveActForQuestions] = useState<Activity | null>(null);
 
-  // Materials state
-  const [activeTab, setActiveTab] = useState<"sequence" | "materials">("sequence");
+  // Materials state — now per video
+  const [activeMaterialVideoId, setActiveMaterialVideoId] = useState<string | null>(null);
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
@@ -96,14 +122,22 @@ const ModuleDetailPage = () => {
   });
 
   const { data: materials = [], isLoading: mLoading } = useQuery<Material[]>({
-    queryKey: ["materials", moduleId],
-    queryFn: () => api.get(`${base}/materials`).then((r) => r.data.data ?? r.data).catch(() => []),
+    queryKey: ["materials", "video", activeMaterialVideoId],
+    queryFn: () =>
+      api.get(`${base}/videos/${activeMaterialVideoId}/materials`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => []),
+    enabled: !!activeMaterialVideoId,
   });
 
   const sequence: SequenceItem[] = [
     ...videos.map((v) => ({ type: "video" as const, data: v })),
     ...activities.map((a) => ({ type: "activity" as const, data: a })),
   ].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder);
+
+  const activeMaterialVideo = activeMaterialVideoId
+    ? videos.find((v) => v.id === activeMaterialVideoId) ?? null
+    : null;
 
   const saveVideoMut = useMutation({
     mutationFn: () =>
@@ -129,16 +163,15 @@ const ModuleDetailPage = () => {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (t: { type: string; id: string }) =>
-      t.type === "video"
-        ? api.delete(`${base}/videos/${t.id}`).then(() => {})
-        : t.type === "material"
-        ? api.delete(`${base}/materials/${t.id}`).then(() => {})
-        : api.delete(`${base}/activities/${t.id}`).then(() => {}),
+    mutationFn: (t: { type: string; id: string }) => {
+      if (t.type === "video") return api.delete(`${base}/videos/${t.id}`).then(() => {});
+      if (t.type === "material") return api.delete(`${base}/videos/${activeMaterialVideoId}/materials/${t.id}`).then(() => {});
+      return api.delete(`${base}/activities/${t.id}`).then(() => {});
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos", moduleId] });
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
-      qc.invalidateQueries({ queryKey: ["materials", moduleId] });
+      qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] });
       setDeleteTarget(null);
       toast.success("Item removido");
     },
@@ -162,16 +195,16 @@ const ModuleDetailPage = () => {
 
   const saveMaterialMut = useMutation({
     mutationFn: () => {
-      // editing a file-based material: only title is editable (no re-upload here)
+      const matBase = `${base}/videos/${activeMaterialVideoId}/materials`;
       if (editingMaterial?.hasFile) {
-        return api.put(`${base}/materials/${editingMaterial.id}`, { title: materialForm.title, type: materialForm.type }).then(() => {});
+        return api.put(`${matBase}/${editingMaterial.id}`, { title: materialForm.title, type: materialForm.type }).then(() => {});
       }
       return editingMaterial
-        ? api.put(`${base}/materials/${editingMaterial.id}`, materialForm).then(() => {})
-        : api.post(`${base}/materials`, materialForm).then(() => {});
+        ? api.put(`${matBase}/${editingMaterial.id}`, materialForm).then(() => {})
+        : api.post(matBase, materialForm).then(() => {});
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["materials", moduleId] });
+      qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] });
       setMaterialModalOpen(false);
       setEditingMaterial(null);
       toast.success("Material salvo");
@@ -186,12 +219,12 @@ const ModuleDetailPage = () => {
       fd.append("title", materialForm.title);
       fd.append("type", materialForm.type);
       fd.append("file", selectedFile);
-      return api.post(`${base}/materials/upload`, fd, {
+      return api.post(`${base}/videos/${activeMaterialVideoId}/materials/upload`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       }).then(() => {});
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["materials", moduleId] });
+      qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] });
       setMaterialModalOpen(false);
       setEditingMaterial(null);
       setSelectedFile(null);
@@ -213,6 +246,11 @@ const ModuleDetailPage = () => {
   const openCreateActivity = () => { setEditingActivity(null); setActForm({ title: "", description: "", sequenceOrder: sequence.length, passingScore: 70 }); setActivityModalOpen(true); };
   const openEditActivity = (a: Activity) => { setEditingActivity(a); setActForm({ title: a.title, description: a.description, sequenceOrder: a.sequenceOrder, passingScore: a.passingScore }); setActivityModalOpen(true); };
 
+  const openMaterialsPanel = (videoId: string) => {
+    setActiveMaterialVideoId(videoId);
+    setActiveActForQuestions(null);
+  };
+
   const openCreateMaterial = () => {
     setEditingMaterial(null);
     setSelectedFile(null);
@@ -224,32 +262,6 @@ const ModuleDetailPage = () => {
     setSelectedFile(null);
     setMaterialForm({ title: m.title, url: m.url || "", type: m.type, description: m.description || "" });
     setMaterialModalOpen(true);
-  };
-
-  const getMaterialIcon = (type: string) => {
-    switch (type) {
-      case "PDF":   return "📄";
-      case "WORD":  return "📝";
-      case "TXT":   return "📃";
-      case "SLIDE": return "📊";
-      case "IMAGE": return "🖼️";
-      case "LINK":  return "🔗";
-      case "VIDEO_EXTRA": return "🎬";
-      default: return "📎";
-    }
-  };
-
-  const getMaterialLabel = (type: string) => {
-    switch (type) {
-      case "PDF":   return "PDF";
-      case "WORD":  return "Word";
-      case "TXT":   return "TXT";
-      case "SLIDE": return "Slides";
-      case "IMAGE": return "Imagem";
-      case "LINK":  return "Link";
-      case "VIDEO_EXTRA": return "Vídeo Extra";
-      default: return type;
-    }
   };
 
   const isLoading = vLoading || aLoading;
@@ -265,56 +277,32 @@ const ModuleDetailPage = () => {
       <div className="flex items-center justify-between mb-6 mt-4">
         <h1 className="text-xl font-semibold text-foreground">{moduleData?.title || "Carregando..."}</h1>
         <div className="flex gap-2">
-          {activeTab === "sequence" ? (
+          {!activeMaterialVideoId && (
             <>
               <Button onClick={openCreateVideo}><Plus className="h-4 w-4" /> Aula</Button>
               <Button variant="outline" onClick={openCreateActivity}><Plus className="h-4 w-4" /> Atividade</Button>
             </>
-          ) : (
+          )}
+          {activeMaterialVideoId && (
             <Button onClick={openCreateMaterial}><Plus className="h-4 w-4" /> Material</Button>
           )}
         </div>
       </div>
 
-      {/* Abas */}
-      <div className="flex border-b border-border mb-6">
-        <button
-          onClick={() => setActiveTab("sequence")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "sequence"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          📋 Sequência de Aulas
-        </button>
-        <Link
-          to={`/admin/courses/${courseId}/modules/${moduleId}/activities`}
-          className="ml-auto px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 self-center"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Gerenciar Atividades
-        </Link>
-        <button
-          onClick={() => setActiveTab("materials")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === "materials"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          📁 Materiais
-          {materials.length > 0 && (
-            <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full">
-              {materials.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Aba Sequência */}
-      {activeTab === "sequence" && (
+      {/* Sequência de Aulas */}
+      {!activeMaterialVideoId && (
         <>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">📋 Sequência de Aulas</h2>
+            <Link
+              to={`/admin/courses/${courseId}/modules/${moduleId}/activities`}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Gerenciar Atividades
+            </Link>
+          </div>
+
           {isLoading ? (
             <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : sequence.length === 0 ? (
@@ -328,7 +316,7 @@ const ModuleDetailPage = () => {
                     <TableHead className="w-28">Tipo</TableHead>
                     <TableHead>Título</TableHead>
                     <TableHead>Info</TableHead>
-                    <TableHead className="w-28">Ações</TableHead>
+                    <TableHead className="w-36">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -356,6 +344,16 @@ const ModuleDetailPage = () => {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => item.type === "video" ? openEditVideo(item.data as VideoItem) : openEditActivity(item.data as Activity)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: item.type, id: item.data.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          {item.type === "video" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Materiais desta aula"
+                              onClick={() => openMaterialsPanel(item.data.id)}
+                            >
+                              <FolderOpen className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           {item.type === "activity" && (
                             <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
                           )}
@@ -410,9 +408,19 @@ const ModuleDetailPage = () => {
         </>
       )}
 
-      {/* Aba Materiais */}
-      {activeTab === "materials" && (
+      {/* Painel de Materiais por Aula */}
+      {activeMaterialVideoId && (
         <div>
+          <div className="flex items-center gap-3 mb-4">
+            <Button variant="ghost" size="sm" onClick={() => setActiveMaterialVideoId(null)} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /> Voltar
+            </Button>
+            <span className="text-sm text-muted-foreground">/</span>
+            <span className="text-sm font-medium text-foreground">
+              📁 Materiais — {activeMaterialVideo?.title ?? "Aula"}
+            </span>
+          </div>
+
           {mLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -483,13 +491,13 @@ const ModuleDetailPage = () => {
           <DialogHeader><DialogTitle>{editingVideo ? "Editar Aula" : "Nova Aula"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); saveVideoMut.mutate(); }} className="space-y-4">
             <div className="space-y-2"><Label>Título</Label><Input value={videoForm.title} onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })} required /></div>
-            
+
             <div className="space-y-2">
               <Label>Mux Asset ID</Label>
-              <Input 
-                value={videoForm.muxAssetId} 
-                onChange={(e) => setVideoForm({ ...videoForm, muxAssetId: e.target.value })} 
-                placeholder="Ex: dHg700wI8O3JlT3SyJxWS5aqTi2f3z00NII00uf8glPJrM" 
+              <Input
+                value={videoForm.muxAssetId}
+                onChange={(e) => setVideoForm({ ...videoForm, muxAssetId: e.target.value })}
+                placeholder="Ex: dHg700wI8O3JlT3SyJxWS5aqTi2f3z00NII00uf8glPJrM"
               />
               <p className="text-xs text-muted-foreground">O vídeo será buscado automaticamente no Mux.</p>
             </div>
@@ -632,7 +640,6 @@ const ModuleDetailPage = () => {
               />
             </div>
 
-            {/* File upload zone */}
             {isFileUpload(materialForm.type) && !editingMaterial?.hasFile && (
               <div className="space-y-2">
                 <Label>Arquivo</Label>
@@ -681,7 +688,6 @@ const ModuleDetailPage = () => {
               </div>
             )}
 
-            {/* Editing a file-based material: show current file as readonly */}
             {editingMaterial?.hasFile && (
               <div className="flex items-center gap-3 border border-border rounded-lg px-4 py-3 bg-secondary/20">
                 <span className="text-2xl">{getMaterialIcon(materialForm.type)}</span>
@@ -695,7 +701,6 @@ const ModuleDetailPage = () => {
               </div>
             )}
 
-            {/* URL input for non-file types */}
             {!isFileUpload(materialForm.type) && (
               <div className="space-y-2">
                 <Label>URL</Label>

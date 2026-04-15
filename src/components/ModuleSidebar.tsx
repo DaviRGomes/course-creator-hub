@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Circle, Lock, PlayCircle, FileQuestion } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -26,12 +27,6 @@ const ModuleSidebar = ({ courseId, moduleId, slug, currentId, currentType = "VID
   const { data: sequence = [] } = useQuery<any[]>({
     queryKey: ["module-sequence", courseId, Number(moduleId)],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/sequence`).then((r) => r.data.data ?? r.data),
-    enabled: !!courseId,
-  });
-
-  const { data: materials = [] } = useQuery<any[]>({
-    queryKey: ["materials", String(moduleId)],
-    queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/materials`).then((r) => r.data.data ?? r.data).catch(() => []),
     enabled: !!courseId,
   });
 
@@ -99,49 +94,6 @@ const ModuleSidebar = ({ courseId, moduleId, slug, currentId, currentType = "VID
         })}
       </div>
 
-      {materials.length > 0 && (
-        <div className="border-t border-border px-4 py-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-            📁 Materiais de Apoio
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {materials.map((m: any) => {
-              const icon =
-                m.type === "PDF" ? "📄" :
-                m.type === "WORD" ? "📝" :
-                m.type === "TXT" ? "📃" :
-                m.type === "SLIDE" ? "📊" :
-                m.type === "IMAGE" ? "🖼️" :
-                m.type === "LINK" ? "🔗" :
-                m.type === "VIDEO_EXTRA" ? "🎬" : "📎";
-
-              const handleClick = () => {
-                if (m.url) {
-                  window.open(m.url, "_blank", "noopener,noreferrer");
-                } else {
-                  const base = (api.defaults.baseURL || "/api").replace(/\/$/, "");
-                  window.open(
-                    `${base}/courses/${courseId}/modules/${moduleId}/materials/${m.id}/download`,
-                    "_blank",
-                    "noopener,noreferrer"
-                  );
-                }
-              };
-
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={handleClick}
-                  className="flex items-center gap-1.5 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full transition-colors"
-                >
-                  {icon} {m.title}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
