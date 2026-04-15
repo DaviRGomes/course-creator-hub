@@ -34,4 +34,8 @@ api.interceptors.response.use(
   }
 );
 
+// Install demo interceptor when no backend URL is configured
+import { installDemoInterceptor } from "./demoInterceptor";
+installDemoInterceptor(api);
+
 export default api;
