@@ -97,14 +97,30 @@ const CourseOverviewPage = () => {
       ) : (
         <>
           <div className="max-w-3xl mx-auto mb-6">
-            {course?.thumbnail ? (
+            {introVideo?.muxPlaybackId && introVideo?.muxStatus === "ready" ? (
+              <MuxPlayer
+                playbackId={introVideo.muxPlaybackId}
+                streamType="on-demand"
+                preferPlayback="native"
+                className="w-full rounded-lg overflow-hidden"
+                style={{ aspectRatio: "16/9" }}
+                accentColor="#6366f1"
+              />
+            ) : introVideo?.muxStatus === "preparing" ? (
+              <div className="w-full aspect-video rounded-lg bg-foreground/5 border border-border flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="h-10 w-10 text-primary/40 mx-auto mb-2 animate-spin" />
+                  <p className="text-sm text-muted-foreground">⏳ Vídeo sendo processado...</p>
+                </div>
+              </div>
+            ) : course?.thumbnail ? (
               <img
                 src={course.thumbnail}
                 alt={course.title}
                 className="w-full aspect-video object-cover rounded-lg"
               />
             ) : (
-              <div className="w-full h-48 bg-muted flex items-center justify-center">
+              <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground" />
               </div>
             )}
