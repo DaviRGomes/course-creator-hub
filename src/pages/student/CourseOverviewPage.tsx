@@ -45,6 +45,16 @@ const CourseOverviewPage = () => {
     enabled: !!courseId && enrolled === true,
   });
 
+  const firstModuleId = modules[0]?.id;
+
+  const { data: firstModuleVideos = [] } = useQuery<any[]>({
+    queryKey: ["videos", firstModuleId],
+    queryFn: () => api.get(`/courses/${courseId}/modules/${firstModuleId}/videos`).then((r) => r.data.data ?? r.data),
+    enabled: !!courseId && !!firstModuleId,
+  });
+
+  const introVideo = firstModuleVideos[0] ?? null;
+
   const sequenceQueries = useQueries({
     queries: modules.map((mod: any) => ({
       queryKey: ["module-sequence", courseId, mod.id],
