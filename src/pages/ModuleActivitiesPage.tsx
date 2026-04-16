@@ -21,6 +21,9 @@ import {
   ChevronLeft, Plus, Pencil, Trash2, Loader2, FileText, ChevronDown, ChevronRight,
   Paperclip, Download, Upload,
 } from "lucide-react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableItem } from "@/components/SortableItem";
 
 interface Material {
   id: string;
@@ -238,6 +241,28 @@ const ModuleActivitiesPage = () => {
     correctAnswer: "true",
   });
 
+  const [localQuestionsMap, setLocalQuestionsMap] = useState<Record<string, Question[]>>({});
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const reorderQuestionsMut = useMutation({
+    mutationFn: ({ actId, ids }: { actId: string; ids: string[] }) =>
+      api.patch(`${base}/activities/${actId}/questions/reorder`, { ids: ids.map(Number) }),
+    onError: () => toast.error("Erro ao reordenar questões"),
+  });
+
+  const getQuestions = (act: Activity) => localQuestionsMap[act.id] ?? act.questions ?? [];
+
+  const handleQuestionDragEnd = (act: Activity, event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const qs = getQuestions(act);
+    const oldIdx = qs.findIndex((q) => String(q.id) === active.id);
+    const newIdx = qs.findIndex((q) => String(q.id) === over.id);
+    const reordered = arrayMove(qs, oldIdx, newIdx);
+    setLocalQuestionsMap((prev) => ({ ...prev, [act.id]: reordered }));
+    reorderQuestionsMut.mutate({ actId: act.id, ids: reordered.map((q) => String(q.id!)) });
+  };
+
   const { data: moduleData } = useQuery({
     queryKey: ["module", moduleId],
     queryFn: () => api.get(base).then((r) => r.data.data ?? r.data),
@@ -295,6 +320,11 @@ const ModuleActivitiesPage = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
+      setLocalQuestionsMap((prev) => {
+        const next = { ...prev };
+        delete next[activeActForQuestion!.id];
+        return next;
+      });
       setQuestionModalOpen(false);
       toast.success("Questão adicionada");
     },
@@ -485,48 +515,58 @@ const ModuleActivitiesPage = () => {
                             </button>
                           </p>
                         ) : (
-                          <div className="space-y-2">
-                            {act.questions?.map((q, qi) => (
-                              <div
-                                key={q.id || qi}
-                                className="bg-card border border-border rounded-md p-3"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                      <span className="text-xs text-muted-foreground font-medium">
-                                        Q{qi + 1}
-                                      </span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {QUESTION_TYPE_LABEL[q.questionType] ?? q.questionType}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground">
-                                        {q.points} pt{q.points !== 1 ? "s" : ""}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-foreground">{q.questionText}</p>
-                                    {q.options && q.options.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5 mt-2">
-                                        {q.options.map((o, oi) => (
-                                          <span
-                                            key={oi}
-                                            className={`text-xs px-2 py-0.5 rounded border ${
-                                              o.isCorrect
-                                                ? "bg-green-50 text-green-700 border-green-200 font-medium"
-                                                : "bg-secondary text-secondary-foreground border-transparent"
-                                            }`}
-                                          >
-                                            {o.optionText}
-                                            {o.isCorrect && " ✓"}
-                                          </span>
-                                        ))}
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(e) => handleQuestionDragEnd(act, e)}
+                          >
+                            <SortableContext
+                              items={getQuestions(act).map((q) => String(q.id))}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="space-y-2">
+                                {getQuestions(act).map((q, qi) => (
+                                  <SortableItem
+                                    key={String(q.id)}
+                                    id={String(q.id)}
+                                    className="bg-card border border-border rounded-md"
+                                  >
+                                    <div className="p-3 pr-3">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <span className="text-xs text-muted-foreground font-medium">
+                                          Q{qi + 1}
+                                        </span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {QUESTION_TYPE_LABEL[q.questionType] ?? q.questionType}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {q.points} pt{q.points !== 1 ? "s" : ""}
+                                        </span>
                                       </div>
-                                    )}
-                                  </div>
-                                </div>
+                                      <p className="text-sm text-foreground">{q.questionText}</p>
+                                      {q.options && q.options.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                          {q.options.map((o, oi) => (
+                                            <span
+                                              key={oi}
+                                              className={`text-xs px-2 py-0.5 rounded border ${
+                                                o.isCorrect
+                                                  ? "bg-green-50 text-green-700 border-green-200 font-medium"
+                                                  : "bg-secondary text-secondary-foreground border-transparent"
+                                              }`}
+                                            >
+                                              {o.optionText}
+                                              {o.isCorrect && " ✓"}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </SortableItem>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            </SortableContext>
+                          </DndContext>
                         )}
                         <div className="mt-3 flex justify-end">
                           <Button size="sm" variant="outline" onClick={() => openAddQuestion(act)}>
