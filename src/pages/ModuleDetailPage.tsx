@@ -101,9 +101,11 @@ const ModuleDetailPage = () => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [localSequence, setLocalSequence] = useState<SequenceItem[]>([]);
   const [localMaterials, setLocalMaterials] = useState<Material[]>([]);
+  const [localActivityMaterials, setLocalActivityMaterials] = useState<Material[]>([]);
 
-  // Materials state — now per video
+  // Materials state — per video or per activity
   const [activeMaterialVideoId, setActiveMaterialVideoId] = useState<string | null>(null);
+  const [activeMaterialActivityId, setActiveMaterialActivityId] = useState<string | null>(null);
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", type: "PDF" as Material["type"], description: "" });
@@ -137,10 +139,20 @@ const ModuleDetailPage = () => {
     enabled: !!activeMaterialVideoId,
   });
 
+  const { data: activityMaterials = [], isLoading: amLoading } = useQuery<Material[]>({
+    queryKey: ["materials", "activity", activeMaterialActivityId],
+    queryFn: () =>
+      api.get(`${base}/activities/${activeMaterialActivityId}/materials`)
+        .then((r) => r.data.data ?? r.data)
+        .catch(() => []),
+    enabled: !!activeMaterialActivityId,
+  });
+
   useEffect(() => {
     setLocalSequence([...videos.map((v) => ({ type: "video" as const, data: v })), ...activities.map((a) => ({ type: "activity" as const, data: a }))].sort((a, b) => a.data.sequenceOrder - b.data.sequenceOrder));
   }, [videos, activities]);
   useEffect(() => { setLocalMaterials(materials); }, [materials]);
+  useEffect(() => { setLocalActivityMaterials(activityMaterials); }, [activityMaterials]);
 
   const sequence: SequenceItem[] = [
     ...videos.map((v) => ({ type: "video" as const, data: v })),
@@ -149,6 +161,10 @@ const ModuleDetailPage = () => {
 
   const activeMaterialVideo = activeMaterialVideoId
     ? videos.find((v) => v.id === activeMaterialVideoId) ?? null
+    : null;
+
+  const activeMaterialActivity = activeMaterialActivityId
+    ? activities.find((a) => a.id === activeMaterialActivityId) ?? null
     : null;
 
   const saveVideoMut = useMutation({
@@ -178,12 +194,14 @@ const ModuleDetailPage = () => {
     mutationFn: (t: { type: string; id: string }) => {
       if (t.type === "video") return api.delete(`${base}/videos/${t.id}`).then(() => {});
       if (t.type === "material") return api.delete(`${base}/videos/${activeMaterialVideoId}/materials/${t.id}`).then(() => {});
+      if (t.type === "activity-material") return api.delete(`${base}/activities/${activeMaterialActivityId}/materials/${t.id}`).then(() => {});
       return api.delete(`${base}/activities/${t.id}`).then(() => {});
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos", moduleId] });
       qc.invalidateQueries({ queryKey: ["activities", moduleId] });
       qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] });
+      qc.invalidateQueries({ queryKey: ["materials", "activity", activeMaterialActivityId] });
       setDeleteTarget(null);
       toast.success("Item removido");
     },
@@ -259,6 +277,34 @@ const ModuleDetailPage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["materials", "video", activeMaterialVideoId] }),
   });
 
+  const reorderActivityMaterialsMut = useMutation({
+    mutationFn: (ids: string[]) =>
+      api.patch(`${base}/activities/${activeMaterialActivityId}/materials/reorder`, { ids: ids.map(Number) }),
+    onError: () => { setLocalActivityMaterials(activityMaterials); toast.error("Erro ao reordenar"); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["materials", "activity", activeMaterialActivityId] }),
+  });
+
+  const uploadActivityMaterialMut = useMutation({
+    mutationFn: () => {
+      if (!selectedFile) throw new Error("Selecione um arquivo.");
+      const fd = new FormData();
+      fd.append("title", materialForm.title);
+      fd.append("type", materialForm.type);
+      fd.append("file", selectedFile);
+      return api.post(`${base}/activities/${activeMaterialActivityId}/materials/upload`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }).then(() => {});
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["materials", "activity", activeMaterialActivityId] });
+      setMaterialModalOpen(false);
+      setEditingMaterial(null);
+      setSelectedFile(null);
+      toast.success("Arquivo enviado com sucesso");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erro ao enviar arquivo"),
+  });
+
   const reorderQuestionsMut = useMutation({
     mutationFn: ({ actId, ids }: { actId: string; ids: string[] }) =>
       api.patch(`${base}/activities/${actId}/questions/reorder`, { ids: ids.map(Number) }),
@@ -280,6 +326,13 @@ const ModuleDetailPage = () => {
 
   const openMaterialsPanel = (videoId: string) => {
     setActiveMaterialVideoId(videoId);
+    setActiveMaterialActivityId(null);
+    setActiveActForQuestions(null);
+  };
+
+  const openActivityMaterialsPanel = (activityId: string) => {
+    setActiveMaterialActivityId(activityId);
+    setActiveMaterialVideoId(null);
     setActiveActForQuestions(null);
   };
 
@@ -297,6 +350,7 @@ const ModuleDetailPage = () => {
   };
 
   const isLoading = vLoading || aLoading;
+  const anyMaterialPanelOpen = !!activeMaterialVideoId || !!activeMaterialActivityId;
 
   return (
     <div>
@@ -309,20 +363,20 @@ const ModuleDetailPage = () => {
       <div className="flex items-center justify-between mb-6 mt-4">
         <h1 className="text-xl font-semibold text-foreground">{moduleData?.title || "Carregando..."}</h1>
         <div className="flex gap-2">
-          {!activeMaterialVideoId && (
+          {!anyMaterialPanelOpen && (
             <>
               <Button onClick={openCreateVideo}><Plus className="h-4 w-4" /> Aula</Button>
               <Button variant="outline" onClick={openCreateActivity}><Plus className="h-4 w-4" /> Atividade</Button>
             </>
           )}
-          {activeMaterialVideoId && (
+          {anyMaterialPanelOpen && (
             <Button onClick={openCreateMaterial}><Plus className="h-4 w-4" /> Material</Button>
           )}
         </div>
       </div>
 
       {/* Sequência de Aulas */}
-      {!activeMaterialVideoId && (
+      {!anyMaterialPanelOpen && (
         <>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">📋 Sequência de Aulas</h2>
@@ -377,7 +431,12 @@ const ModuleDetailPage = () => {
                             </Button>
                           )}
                           {item.type === "activity" && (
-                            <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
+                            <>
+                              <Button variant="ghost" size="sm" onClick={() => setActiveActForQuestions(item.data as Activity)} className="text-xs">Questões</Button>
+                              <Button variant="ghost" size="icon" title="Materiais da Atividade" onClick={() => openActivityMaterialsPanel(item.data.id)}>
+                                <FolderOpen className="h-4 w-4 text-primary" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -533,6 +592,88 @@ const ModuleDetailPage = () => {
         </div>
       )}
 
+      {/* Painel de Materiais por Atividade */}
+      {activeMaterialActivityId && (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <Button variant="ghost" size="sm" onClick={() => setActiveMaterialActivityId(null)} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /> Voltar
+            </Button>
+            <span className="text-sm text-muted-foreground">/</span>
+            <span className="text-sm font-medium text-foreground">
+              📁 Materiais — {activeMaterialActivity?.title ?? "Atividade"}
+            </span>
+          </div>
+
+          {amLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : localActivityMaterials.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground border border-dashed border-border rounded-lg">
+              <p className="text-4xl mb-3">📁</p>
+              <p className="font-medium">Nenhum material cadastrado</p>
+              <p className="text-sm mt-1">PDFs e documentos de apoio aparecem aqui</p>
+              <Button className="mt-4" onClick={openCreateMaterial}>
+                <Plus className="h-4 w-4" /> Adicionar Material
+              </Button>
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const oldIdx = localActivityMaterials.findIndex((m) => m.id === active.id);
+              const newIdx = localActivityMaterials.findIndex((m) => m.id === over.id);
+              const reordered = arrayMove(localActivityMaterials, oldIdx, newIdx);
+              setLocalActivityMaterials(reordered);
+              reorderActivityMaterialsMut.mutate(reordered.map((m) => m.id));
+            }}>
+              <SortableContext items={localActivityMaterials.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {localActivityMaterials.map((m) => (
+                    <SortableItem key={m.id} id={m.id} className="bg-card border border-border rounded-lg">
+                      <div className="flex items-center gap-3 pr-3 py-2">
+                        <span className="text-2xl">{getMaterialIcon(m.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-medium text-foreground text-sm truncate">{m.title}</p>
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              {getMaterialLabel(m.type)}
+                            </Badge>
+                          </div>
+                          {m.hasFile ? (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {m.fileName} {m.fileSize && `· ${formatBytes(m.fileSize)}`}
+                            </p>
+                          ) : (
+                            <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block">
+                              {m.url}
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => openEditMaterial(m)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget({ type: "activity-material", id: m.id })}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </SortableItem>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      )}
+
       {/* Dialogs */}
       <Dialog open={videoModalOpen} onOpenChange={(o) => { setVideoModalOpen(o); if (!o) setEditingVideo(null); }}>
         <DialogContent>
@@ -648,7 +789,11 @@ const ModuleDetailPage = () => {
             onSubmit={(e) => {
               e.preventDefault();
               if (isFileUpload(materialForm.type) && !editingMaterial?.hasFile) {
-                uploadMaterialMut.mutate();
+                if (activeMaterialActivityId) {
+                  uploadActivityMaterialMut.mutate();
+                } else {
+                  uploadMaterialMut.mutate();
+                }
               } else {
                 saveMaterialMut.mutate();
               }
@@ -768,10 +913,11 @@ const ModuleDetailPage = () => {
                 disabled={
                   saveMaterialMut.isPending ||
                   uploadMaterialMut.isPending ||
+                  uploadActivityMaterialMut.isPending ||
                   (isFileUpload(materialForm.type) && !editingMaterial?.hasFile && !selectedFile)
                 }
               >
-                {(saveMaterialMut.isPending || uploadMaterialMut.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {(saveMaterialMut.isPending || uploadMaterialMut.isPending || uploadActivityMaterialMut.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isFileUpload(materialForm.type) && !editingMaterial?.hasFile ? "Enviar Arquivo" : "Salvar"}
               </Button>
             </DialogFooter>
