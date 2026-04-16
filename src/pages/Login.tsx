@@ -25,7 +25,8 @@ const Login = () => {
       const role = await login(email, password);
       navigate(role === "ADMIN" ? "/admin/users" : "/dashboard", { replace: true });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao fazer login");
+      const msg = err.response?.data?.message;
+      toast.error(msg || "Não foi possível fazer login. Verifique sua conexão e tente novamente.");
     } finally {
       setLoading(false);
     }

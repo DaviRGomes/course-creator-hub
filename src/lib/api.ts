@@ -13,23 +13,28 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
-      // Evitar toast em paginas de login/auth (nao e sessao expirada — e credencial invalida)
-      const isAuthEndpoint = err.config?.url?.includes("/auth/login")
-          || err.config?.url?.includes("/auth/register")
-          || err.config?.url?.includes("/auth/me");
-      if (!isAuthEndpoint) {
-        toast.error("Sessao expirada", {
-          description: "Faca login novamente para continuar.",
-          duration: 3000,
-        });
-      }
-      // Hard redirect — clears in-flight state (UI-SPEC Section 2)
-      // Skip redirect if already on login page or during /auth/me init check
-      if (!isAuthEndpoint) {
-        window.location.href = "/login";
-      }
+    const status = err.response?.status;
+    const isAuthEndpoint = err.config?.url?.includes("/auth/login")
+        || err.config?.url?.includes("/auth/register")
+        || err.config?.url?.includes("/auth/me");
+
+    if (status === 401 && !isAuthEndpoint) {
+      // Sessão expirada — redireciona globalmente (mutations não tratam isso individualmente)
+      toast.error("Sessão expirada", {
+        description: "Faça login novamente para continuar.",
+        duration: 3000,
+      });
+      window.location.href = "/login";
+    } else if (status === 403 && !isAuthEndpoint) {
+      // Acesso negado — mutations não tratam 403 individualmente
+      toast.error("Acesso negado", {
+        description: "Você não tem permissão para realizar esta ação.",
+        duration: 4000,
+      });
     }
+    // 400/404/422/429/500: cada mutation tem seu próprio onError com mensagem contextual.
+    // Tratar aqui causaria toast duplicado.
+
     return Promise.reject(err);
   }
 );

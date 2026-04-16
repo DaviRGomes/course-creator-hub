@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -87,6 +88,10 @@ const QuizPage = () => {
       queryClient.invalidateQueries({
         queryKey: ["module-sequence", courseId, Number(moduleId)],
       });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message;
+      toast.error(msg || "Não foi possível enviar suas respostas. Tente novamente.");
     },
   });
 
